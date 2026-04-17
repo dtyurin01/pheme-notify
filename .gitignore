@@ -31,3 +31,12 @@ build/
 
 ### VS Code ###
 .vscode/
+
+next_level_projects.md
+implementation_plan.md
+
+.env
+COMMANDS.md
+.gitignore
+CLAUDE.md
+.claude

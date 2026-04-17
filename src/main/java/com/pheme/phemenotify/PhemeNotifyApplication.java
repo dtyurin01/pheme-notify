@@ -9,5 +9,4 @@ public class PhemeNotifyApplication {
     public static void main(String[] args) {
         SpringApplication.run(PhemeNotifyApplication.class, args);
     }
-
 }

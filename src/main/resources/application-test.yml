@@ -1,0 +1,16 @@
+spring:
+  flyway:
+    enabled: true
+
+  jpa:
+    show-sql: true
+
+  kafka:
+    consumer:
+      auto-offset-reset: earliest
+
+logging:
+  level:
+    com.pheme.phemenotify: DEBUG
+    org.springframework.kafka: WARN
+    org.hibernate.SQL: WARN
