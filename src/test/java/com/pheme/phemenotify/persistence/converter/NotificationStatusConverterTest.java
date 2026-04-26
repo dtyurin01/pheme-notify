@@ -2,6 +2,7 @@ package com.pheme.phemenotify.persistence.converter;
 
 import com.pheme.phemenotify.persistence.entity.NotificationStatus;
 import org.junit.jupiter.api.Test;
+import org.postgresql.util.PGobject;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -10,22 +11,23 @@ public class NotificationStatusConverterTest {
 
     @Test
     void shouldReturnName_whenStatusIsDelivered(){
-        String result = converter.convertToDatabaseColumn(NotificationStatus.DELIVERED);
+        PGobject result = converter.convertToDatabaseColumn(NotificationStatus.DELIVERED);
 
-        assertEquals("DELIVERED", result);
+        assertNotNull(result);
+        assertEquals("notification_status", result.getType());
+        assertEquals("DELIVERED", result.getValue());
     }
 
     @Test
     void shouldReturnNull_whenStatusIsNull() {
-        String result = converter.convertToDatabaseColumn(null);
+        PGobject result = converter.convertToDatabaseColumn(null);
 
         assertNull(result);
     }
 
-
     @Test
     void shouldReturnStatus_whenCodeIsLowercase() {
-        NotificationStatus result = converter.convertToEntityAttribute("delivered");
+        NotificationStatus result = converter.convertToEntityAttribute(pgObject("notification_status", "delivered"));
 
         assertEquals(NotificationStatus.DELIVERED, result);
     }
@@ -39,8 +41,18 @@ public class NotificationStatusConverterTest {
 
     @Test
     void shouldThrowException_whenCodeIsUnknown() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            converter.convertToEntityAttribute("not_a_valid_status");
-        });
+        assertThrows(IllegalArgumentException.class,
+                () -> converter.convertToEntityAttribute(pgObject("notification_status", "not_a_valid_status")));
+    }
+
+    private PGobject pgObject(String type, String value) {
+        try {
+            PGobject result = new PGobject();
+            result.setType(type);
+            result.setValue(value);
+            return result;
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

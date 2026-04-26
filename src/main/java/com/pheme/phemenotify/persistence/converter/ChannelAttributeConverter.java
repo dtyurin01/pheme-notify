@@ -4,17 +4,31 @@ import com.pheme.phemenotify.persistence.entity.Channel;
 import com.pheme.phemenotify.utils.EnumUtils;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
+import org.postgresql.util.PGobject;
+
+import java.sql.SQLException;
 
 @Converter(autoApply = true)
-public class ChannelAttributeConverter implements AttributeConverter<Channel, String> {
+public class ChannelAttributeConverter implements AttributeConverter<Channel, PGobject> {
 
     @Override
-    public String convertToDatabaseColumn(Channel channel) {
-        return channel != null ? channel.name() : null;
+    public PGobject convertToDatabaseColumn(Channel channel) {
+        if (channel == null) {
+            return null;
+        }
+
+        try {
+            PGobject value = new PGobject();
+            value.setType("notification_channel");
+            value.setValue(channel.name());
+            return value;
+        } catch (SQLException e) {
+            throw new IllegalArgumentException("Failed to convert Channel to PostgreSQL enum", e);
+        }
     }
 
     @Override
-    public Channel convertToEntityAttribute(String code) {
-        return EnumUtils.fromValue(Channel.class, code);
+    public Channel convertToEntityAttribute(PGobject dbData) {
+        return dbData != null ? EnumUtils.fromValue(Channel.class, dbData.getValue()) : null;
     }
 }

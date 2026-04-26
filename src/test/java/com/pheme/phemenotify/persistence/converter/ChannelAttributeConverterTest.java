@@ -2,6 +2,7 @@ package com.pheme.phemenotify.persistence.converter;
 
 import com.pheme.phemenotify.persistence.entity.Channel;
 import org.junit.jupiter.api.Test;
+import org.postgresql.util.PGobject;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -10,22 +11,23 @@ class ChannelAttributeConverterTest {
 
     @Test
     void shouldReturnName_whenChannelIsEmail() {
-        String result = converter.convertToDatabaseColumn(Channel.EMAIL);
+        PGobject result = converter.convertToDatabaseColumn(Channel.EMAIL);
 
-        assertEquals("EMAIL", result);
+        assertNotNull(result);
+        assertEquals("notification_channel", result.getType());
+        assertEquals("EMAIL", result.getValue());
     }
 
     @Test
     void shouldReturnNull_whenChannelIsNull() {
-        String result = converter.convertToDatabaseColumn(null);
+        PGobject result = converter.convertToDatabaseColumn(null);
 
         assertNull(result);
     }
 
-
     @Test
     void shouldReturnChannel_whenCodeIsLowercase() {
-        Channel result = converter.convertToEntityAttribute("email");
+        Channel result = converter.convertToEntityAttribute(pgObject("notification_channel", "email"));
 
         assertEquals(Channel.EMAIL, result);
     }
@@ -39,9 +41,18 @@ class ChannelAttributeConverterTest {
 
     @Test
     void shouldThrowException_whenCodeIsUnknown() {
-        // Проверка, что при передаче неизвестного значения выбрасывается IllegalArgumentException
-        assertThrows(IllegalArgumentException.class, () -> {
-            converter.convertToEntityAttribute("unknown_channel_code");
-        });
+        assertThrows(IllegalArgumentException.class,
+                () -> converter.convertToEntityAttribute(pgObject("notification_channel", "unknown_channel_code")));
+    }
+
+    private PGobject pgObject(String type, String value) {
+        try {
+            PGobject result = new PGobject();
+            result.setType(type);
+            result.setValue(value);
+            return result;
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 }
