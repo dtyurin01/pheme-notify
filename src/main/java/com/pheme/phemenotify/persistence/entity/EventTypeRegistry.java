@@ -20,7 +20,8 @@ public class EventTypeRegistry {
                     throw new IllegalStateException("Duplicate EventType code detected: " + existing.getCode());
             }));
     }
-    
+
+    // string get
     public EventType getByCode(String code) {
         var eventType = registry.get(code);
         if (eventType == null) {
@@ -29,6 +30,7 @@ public class EventTypeRegistry {
         return eventType;
     }
 
+    // nullable get
     public Optional<EventType> findByCode(String code) {
         return Optional.ofNullable(registry.get(code));
     }

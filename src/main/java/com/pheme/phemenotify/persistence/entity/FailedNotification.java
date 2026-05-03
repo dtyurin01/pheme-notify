@@ -28,6 +28,8 @@ public class FailedNotification {
     private UUID id;
     @Column(name = "user_id", nullable = false)
     private String userId;
+    @Convert(disableConversion = true)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name="channel", nullable=false)
     private Channel channel;
     @Column(name = "event_type", nullable = false)
@@ -45,6 +47,8 @@ public class FailedNotification {
     private int retryCount = 0;
 
     @Builder.Default
+    @Convert(disableConversion = true)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = false)
     private NotificationStatus status = NotificationStatus.PENDING;
 

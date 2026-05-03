@@ -3,6 +3,8 @@ package com.pheme.phemenotify.persistence.entity;
 import jakarta.persistence.*;
 import com.pheme.phemenotify.persistence.converter.EventTypeAttributeConverter;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -30,6 +32,8 @@ public class Notification {
     @Convert(converter = EventTypeAttributeConverter.class)
     private EventType eventType;
 
+    @Convert(disableConversion = true)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "channel", nullable = false)
     private Channel channel;
 
@@ -37,6 +41,8 @@ public class Notification {
     private String idempotencyKey;
 
     @Builder.Default
+    @Convert(disableConversion = true)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = false)
     private NotificationStatus status = NotificationStatus.PENDING;
 
@@ -53,4 +59,13 @@ public class Notification {
     @Column(name = "sent_at")
     private Instant sentAt;
 
+    public static Notification pending(String userId, EventType eventType, Channel channel, String idempotencyKey) {
+        return Notification.builder()
+                .userId(userId)
+                .eventType(eventType)
+                .channel(channel)
+                .idempotencyKey(idempotencyKey)
+                .status(NotificationStatus.PENDING)
+                .build();
+    }
 }
