@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
+import java.util.UUID;
 
 @Slf4j
 @RestControllerAdvice
@@ -35,7 +36,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ProblemDetail exception(Exception exception) {
-        log.error("Unexpected error: {}", exception.getMessage(), exception);
+        String errorId = UUID.randomUUID().toString();
+        log.error("Unexpected error [id={}]", errorId, exception);
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
                 HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
         problem.setType(URI.create("https://pheme.com/errors/internal-error"));

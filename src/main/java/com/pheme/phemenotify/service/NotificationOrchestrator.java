@@ -12,6 +12,7 @@ import com.pheme.phemenotify.persistence.repository.UserPreferenceRepository;
 import com.pheme.phemenotify.provider.ProviderRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -30,11 +31,6 @@ public class NotificationOrchestrator {
     private final ProviderRegistry providerRegistry;
 
     public void process(NotificationEvent notificationEvent) {
-        if (!deduplicationAdapter.isNew(notificationEvent.id())) {
-            log.warn("Duplicate event {}, skipping", notificationEvent.id());
-
-            return;
-        }
         Optional<UserPreferences> preferences = userPreferenceRepository.findByUserId(notificationEvent.userId());
 
         if (preferences.isEmpty()) {
@@ -44,6 +40,11 @@ public class NotificationOrchestrator {
 
         if (preferences.get().getEnabledChannels().isEmpty()) {
             log.warn("User {} has no enabled channels, skipping", notificationEvent.userId());
+            return;
+        }
+
+        if (!deduplicationAdapter.isNew(notificationEvent.id())) {
+            log.warn("Duplicate event {}, skipping", notificationEvent.id());
             return;
         }
 
@@ -60,7 +61,12 @@ public class NotificationOrchestrator {
                 channel,
                 idempotencyKey
         );
-        notificationRepository.save(notification);
+        try {
+            notificationRepository.save(notification);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Duplicate notification for key {}, skipping", idempotencyKey);
+            return;
+        }
 
         try {
             String renderedTemplate = "TODO: render via TemplateService";
@@ -73,7 +79,7 @@ public class NotificationOrchestrator {
             notification.setStatus(NotificationStatus.FAILED);
             notification.setErrorMessage(e.getMessage());
             notificationRepository.save(notification);
-            log.error("Failed to send via {}: {}", channel, e.getMessage());
+            log.error("Failed to send via {}: {}", channel, e.getClass().getSimpleName(), e);
         }
     }
 }
