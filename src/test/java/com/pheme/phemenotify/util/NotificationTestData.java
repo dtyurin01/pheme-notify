@@ -1,12 +1,14 @@
 package com.pheme.phemenotify.util;
 
 import com.pheme.phemenotify.api.dto.response.NotificationResponse;
+import com.pheme.phemenotify.messaging.event.NotificationEvent;
 import com.pheme.phemenotify.persistence.entity.Channel;
 import com.pheme.phemenotify.persistence.entity.Notification;
 import com.pheme.phemenotify.persistence.entity.NotificationStatus;
 import com.pheme.phemenotify.persistence.entity.eventtype.OrderCompletedEventType;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 public class NotificationTestData {
@@ -62,4 +64,30 @@ public class NotificationTestData {
                 Instant.now()
         );
     }
+
+
+    /// NOTIFICATION EVENT TEST DATA
+
+    public static NotificationEvent defaultEvent() {
+        return new NotificationEvent(
+                "event-1",
+                "user-1",
+                new OrderCompletedEventType(),
+                Channel.EMAIL,
+                Map.of("email", "user@example.com"),
+                Instant.now()
+        );
+    }
+    public static NotificationEvent eventWithPayload(Map<String, String> payload) {
+        return new NotificationEvent(
+                "event-1",
+                "user-1",
+                new OrderCompletedEventType(),
+                Channel.EMAIL,
+                payload,
+                Instant.now()
+        );
+    }
+
+
 }

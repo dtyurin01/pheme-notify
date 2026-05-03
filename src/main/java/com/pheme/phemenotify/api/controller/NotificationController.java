@@ -1,5 +1,6 @@
 package com.pheme.phemenotify.api.controller;
 
+import com.pheme.phemenotify.api.ApiPaths;
 import com.pheme.phemenotify.api.dto.response.NotificationResponse;
 import com.pheme.phemenotify.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/notifications")
+@RequestMapping(ApiPaths.V1 + "/notifications")
 @RequiredArgsConstructor
 public class NotificationController {
     private final NotificationService notificationService;

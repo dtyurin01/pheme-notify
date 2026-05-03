@@ -5,6 +5,7 @@ import com.pheme.phemenotify.api.dto.request.CreatePreferenceRequest;
 import com.pheme.phemenotify.api.dto.response.PreferenceResponse;
 import com.pheme.phemenotify.api.exception.ResourceNotFoundException;
 import com.pheme.phemenotify.service.PreferenceService;
+import com.pheme.phemenotify.api.ApiPaths;
 import com.pheme.phemenotify.util.PreferenceTestData;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +29,8 @@ public class PreferenceControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockitoBean
     private PreferenceService preferenceService;
@@ -39,7 +41,7 @@ public class PreferenceControllerTest {
         PreferenceResponse response = PreferenceTestData.defaultResponse();
         when(preferenceService.getByUserId("user-1")).thenReturn(response);
 
-        mockMvc.perform(get("/api/v1/users/user-1/preferences"))
+        mockMvc.perform(get(ApiPaths.V1 + "/users/user-1/preferences"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value("user-1"))
                 .andExpect(jsonPath("$.enabled").value(true));
@@ -49,20 +51,20 @@ public class PreferenceControllerTest {
     void shouldReturn404_whenUserNotFound() throws Exception {
         when(preferenceService.getByUserId("unknown")).thenThrow(new ResourceNotFoundException("User not found"));
 
-        mockMvc.perform(get("/api/v1/users/unknown/preferences"))
+        mockMvc.perform(get(ApiPaths.V1 + "/users/unknown/preferences"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Resource Not Found"));
     }
 
     @Test
-    void shouldReturn200WithUpdatedReferences_whenRequestIsValid() throws Exception {
+    void shouldReturn200WithUpdatedPreferences_whenRequestIsValid() throws Exception {
         CreatePreferenceRequest request = PreferenceTestData.defaultRequest();
         PreferenceResponse response = PreferenceTestData.defaultResponse();
 
         when(preferenceService.upsert(eq("user-1"), any()))
                 .thenReturn(response);
 
-        mockMvc.perform(put("/api/v1/users/user-1/preferences")
+        mockMvc.perform(put(ApiPaths.V1 + "/users/user-1/preferences")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isOk())
@@ -73,7 +75,7 @@ public class PreferenceControllerTest {
     void shouldReturn400_whenEnabledChannelIsEmpty() throws Exception {
         CreatePreferenceRequest request = new CreatePreferenceRequest(Set.of(), "en", "UTC");
 
-        mockMvc.perform(put("/api/v1/users/user-1/preferences")
+        mockMvc.perform(put(ApiPaths.V1 + "/users/user-1/preferences")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isBadRequest())

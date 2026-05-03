@@ -36,6 +36,7 @@ next_level_projects.md
 implementation_plan.md
 
 .env
+.testcontainers.properties
 COMMANDS.md
 .gitignore
 CLAUDE.md

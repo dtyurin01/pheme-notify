@@ -29,6 +29,16 @@ public class PreferenceTestData {
                 .build();
     }
 
+    public static UserPreferences entityWithNoChannels() {
+        return UserPreferences.builder()
+                .userId("user-1")
+                .enabledChannels(Set.of())
+                .locale("en")
+                .timezone("UTC")
+                .enabled(true)
+                .build();
+    }
+
     public static CreatePreferenceRequest defaultRequest() {
         return new CreatePreferenceRequest(Set.of(Channel.EMAIL), "en", "UTC");
     }

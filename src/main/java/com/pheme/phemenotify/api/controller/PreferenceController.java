@@ -1,5 +1,6 @@
 package com.pheme.phemenotify.api.controller;
 
+import com.pheme.phemenotify.api.ApiPaths;
 import com.pheme.phemenotify.api.dto.request.CreatePreferenceRequest;
 import com.pheme.phemenotify.api.dto.response.PreferenceResponse;
 import com.pheme.phemenotify.service.PreferenceService;
@@ -9,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping(ApiPaths.V1 + "/users")
 @RequiredArgsConstructor
 public class PreferenceController {
 

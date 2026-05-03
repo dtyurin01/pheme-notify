@@ -59,4 +59,13 @@ public class Notification {
     @Column(name = "sent_at")
     private Instant sentAt;
 
+    public static Notification pending(String userId, EventType eventType, Channel channel, String idempotencyKey) {
+        return Notification.builder()
+                .userId(userId)
+                .eventType(eventType)
+                .channel(channel)
+                .idempotencyKey(idempotencyKey)
+                .status(NotificationStatus.PENDING)
+                .build();
+    }
 }

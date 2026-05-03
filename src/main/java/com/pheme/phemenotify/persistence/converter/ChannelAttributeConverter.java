@@ -23,7 +23,7 @@ public class ChannelAttributeConverter implements AttributeConverter<Channel, PG
             value.setValue(channel.name());
             return value;
         } catch (SQLException e) {
-            throw new IllegalArgumentException("Failed to convert Channel to PostgreSQL enum", e);
+            throw new IllegalStateException("Failed to convert Channel to PostgreSQL enum", e);
         }
     }
 
