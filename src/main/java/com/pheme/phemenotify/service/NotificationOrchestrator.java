@@ -30,6 +30,24 @@ public class NotificationOrchestrator {
     private final NotificationRepository notificationRepository;
     private final ProviderRegistry providerRegistry;
 
+    public void processRetry(NotificationEvent notificationEvent) {
+        Optional<UserPreferences> preferences = userPreferenceRepository.findByUserId(notificationEvent.userId());
+
+        if (preferences.isEmpty()) {
+            log.warn("No user preferences found for user {}, skipping retry", notificationEvent.userId());
+            return;
+        }
+
+        if (preferences.get().getEnabledChannels().isEmpty()) {
+            log.warn("User {} has no enabled channels, skipping retry", notificationEvent.userId());
+            return;
+        }
+
+        for (Channel channel : preferences.get().getEnabledChannels()) {
+            processChannel(notificationEvent, channel);
+        }
+    }
+
     public void process(NotificationEvent notificationEvent) {
         Optional<UserPreferences> preferences = userPreferenceRepository.findByUserId(notificationEvent.userId());
 
