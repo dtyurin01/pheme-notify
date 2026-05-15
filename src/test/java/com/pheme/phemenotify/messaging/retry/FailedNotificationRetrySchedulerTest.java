@@ -1,5 +1,6 @@
 package com.pheme.phemenotify.messaging.retry;
 
+import com.pheme.phemenotify.config.RetrySchedulerProperties;
 import com.pheme.phemenotify.persistence.entity.FailedNotification;
 import com.pheme.phemenotify.persistence.entity.NotificationStatus;
 import com.pheme.phemenotify.persistence.repository.FailedNotificationRepository;
@@ -30,6 +31,10 @@ class FailedNotificationRetrySchedulerTest {
 
     @InjectMocks
     private FailedNotificationRetryScheduler scheduler;
+
+    @Mock
+    private RetrySchedulerProperties properties;
+
 
     @Test
     void shouldDoNothing_whenNoPendingNotifications() {
@@ -63,6 +68,8 @@ class FailedNotificationRetrySchedulerTest {
         FailedNotification failed = FailedNotificationTestData.pending(0);
         when(failedNotificationRepository.findByStatusAndNextRetryAtBefore(any(), any()))
                 .thenReturn(List.of(failed));
+        when(properties.getMaxAttempts()).thenReturn(3);
+        when(properties.getBackoffBaseSeconds()).thenReturn(300L);
         doThrow(new RuntimeException("SMTP error")).when(notificationOrchestrator).processRetry(any());
 
         scheduler.retryFailedNotifications();
@@ -81,6 +88,7 @@ class FailedNotificationRetrySchedulerTest {
         FailedNotification failed = FailedNotificationTestData.pending(2); // MAX_RETRY_ATTEMPTS - 1
         when(failedNotificationRepository.findByStatusAndNextRetryAtBefore(any(), any()))
                 .thenReturn(List.of(failed));
+        when(properties.getMaxAttempts()).thenReturn(3);
         doThrow(new RuntimeException("SMTP error")).when(notificationOrchestrator).processRetry(any());
 
         scheduler.retryFailedNotifications();

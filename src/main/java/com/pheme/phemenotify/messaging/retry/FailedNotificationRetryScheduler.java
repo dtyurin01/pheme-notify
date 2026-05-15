@@ -1,5 +1,6 @@
 package com.pheme.phemenotify.messaging.retry;
 
+import com.pheme.phemenotify.config.RetrySchedulerProperties;
 import com.pheme.phemenotify.messaging.event.NotificationEvent;
 import com.pheme.phemenotify.persistence.entity.FailedNotification;
 import com.pheme.phemenotify.persistence.entity.NotificationStatus;
@@ -19,14 +20,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class FailedNotificationRetryScheduler {
 
-    private static final int MAX_RETRY_ATTEMPTS = 3;
-    private static final long BACKOFF_BASE_SECONDS = 300;
-    private static final long FIXED_DELAY = 60_000;
-
     private final FailedNotificationRepository failedNotificationRepository;
     private final NotificationOrchestrator notificationOrchestrator;
+    private final RetrySchedulerProperties properties;
 
-    @Scheduled(fixedDelay = FIXED_DELAY)
+    @Scheduled(fixedDelayString = "${notification.retry-scheduler.fixed-delay-ms}")
     public void retryFailedNotifications() {
         List<FailedNotification> pending = failedNotificationRepository
                 .findByStatusAndNextRetryAtBefore(NotificationStatus.PENDING, Instant.now());
@@ -53,11 +51,11 @@ public class FailedNotificationRetryScheduler {
             failed.setRetryCount(newCount);
             failed.setLastRetryAt(Instant.now());
 
-            if (newCount >= MAX_RETRY_ATTEMPTS) {
+            if (newCount >= properties.getMaxAttempts()) {
                 failed.setStatus(NotificationStatus.FAILED);
                 log.error("Retry exhausted: id={}, marking FAILED", failed.getId(), e);
             } else {
-                long backoffSeconds = BACKOFF_BASE_SECONDS * (1L << (newCount - 1));
+                long backoffSeconds = properties.getBackoffBaseSeconds() * (1L << (newCount - 1));
                 failed.setNextRetryAt(Instant.now().plusSeconds(backoffSeconds));
                 log.warn("Retry #{} failed: id={}, next in {}s", newCount, failed.getId(), backoffSeconds);
             }

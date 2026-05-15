@@ -1,6 +1,7 @@
 package com.pheme.phemenotify.service;
 
 
+import com.pheme.phemenotify.api.exception.RateLimitExceededException;
 import com.pheme.phemenotify.infrastructure.redis.RedisDeduplicationAdapter;
 import com.pheme.phemenotify.messaging.event.NotificationEvent;
 import com.pheme.phemenotify.persistence.entity.Channel;
@@ -29,6 +30,7 @@ public class NotificationOrchestrator {
     private final UserPreferenceRepository userPreferenceRepository;
     private final NotificationRepository notificationRepository;
     private final ProviderRegistry providerRegistry;
+    private final RateLimitService rateLimitService;
 
     public void processRetry(NotificationEvent notificationEvent) {
         Optional<UserPreferences> preferences = userPreferenceRepository.findByUserId(notificationEvent.userId());
@@ -49,6 +51,11 @@ public class NotificationOrchestrator {
     }
 
     public void process(NotificationEvent notificationEvent) {
+        if (!deduplicationAdapter.isNew(notificationEvent.id())) {
+            log.warn("Duplicate event {}, skipping", notificationEvent.id());
+            return;
+        }
+
         Optional<UserPreferences> preferences = userPreferenceRepository.findByUserId(notificationEvent.userId());
 
         if (preferences.isEmpty()) {
@@ -58,11 +65,6 @@ public class NotificationOrchestrator {
 
         if (preferences.get().getEnabledChannels().isEmpty()) {
             log.warn("User {} has no enabled channels, skipping", notificationEvent.userId());
-            return;
-        }
-
-        if (!deduplicationAdapter.isNew(notificationEvent.id())) {
-            log.warn("Duplicate event {}, skipping", notificationEvent.id());
             return;
         }
 
@@ -83,6 +85,16 @@ public class NotificationOrchestrator {
             notificationRepository.save(notification);
         } catch (DataIntegrityViolationException e) {
             log.warn("Duplicate notification for key {}, skipping", idempotencyKey);
+            return;
+        }
+
+        try {
+            rateLimitService.checkLimit(notificationEvent.userId(), channel);
+        }catch (RateLimitExceededException e) {
+            notification.setStatus(NotificationStatus.FAILED);
+            notification.setErrorMessage("Rate limit exceeded: " + e.getMessage());
+            notificationRepository.save(notification);
+            log.warn("Rate limit exceeded for event {} on channel {}, skipping", notificationEvent.id(), channel);
             return;
         }
 

@@ -78,6 +78,23 @@ management:
       export:
         enabled: true
 
+# ─── Notification ────────────────────────────────────────────────────────────
+notification:
+  rate-limit:
+    email:
+      max-requests: 5
+      window-hours: 1
+    sms:
+      max-requests: 3
+      window-hours: 1
+    push:
+      max-requests: 20
+      window-hours: 1
+  retry-scheduler:
+    max-attempts: 3
+    backoff-base-seconds: 300
+    fixed-delay-ms: 60000
+
 # ─── Logging ─────────────────────────────────────────────────────────────────
 logging:
   level:

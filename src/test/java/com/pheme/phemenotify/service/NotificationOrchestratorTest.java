@@ -1,5 +1,6 @@
 package com.pheme.phemenotify.service;
 
+import com.pheme.phemenotify.api.exception.RateLimitExceededException;
 import com.pheme.phemenotify.infrastructure.redis.RedisDeduplicationAdapter;
 import com.pheme.phemenotify.persistence.entity.Channel;
 import com.pheme.phemenotify.persistence.entity.Notification;
@@ -38,6 +39,8 @@ class NotificationOrchestratorTest {
     @Mock
     private ProviderRegistry providerRegistry;
     @Mock
+    private RateLimitService rateLimitService;
+    @Mock
     private NotificationProvider emailProvider;
     @Mock
     private NotificationProvider smsProvider;
@@ -47,7 +50,6 @@ class NotificationOrchestratorTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
         lenient().when(notificationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -62,6 +64,7 @@ class NotificationOrchestratorTest {
 
     @Test
     void shouldSkip_whenUserPreferencesNotFound() {
+        when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
         when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.empty());
 
         orchestrator.process(NotificationTestData.defaultEvent());
@@ -71,6 +74,7 @@ class NotificationOrchestratorTest {
 
     @Test
     void shouldSkip_whenEnabledChannelsEmpty() {
+        when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
         when(userPreferenceRepository.findByUserId("user-1"))
                 .thenReturn(Optional.of(PreferenceTestData.entityWithNoChannels()));
 
@@ -81,6 +85,7 @@ class NotificationOrchestratorTest {
 
     @Test
     void shouldDeliverNotification_whenAllSuccess() {
+        when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
         when(userPreferenceRepository.findByUserId("user-1"))
                 .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
         when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
@@ -94,6 +99,7 @@ class NotificationOrchestratorTest {
 
     @Test
     void shouldMarkAsFailed_whenProviderThrows() {
+        when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
         when(userPreferenceRepository.findByUserId("user-1"))
                 .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
         when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
@@ -108,7 +114,33 @@ class NotificationOrchestratorTest {
     }
 
     @Test
+    void shouldMarkAsFailed_whenRateLimitExceeded() {
+        when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
+        when(userPreferenceRepository.findByUserId("user-1"))
+                .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
+        doThrow(new RateLimitExceededException("max 5 email notifications per 1h"))
+                .when(rateLimitService).checkLimit("user-1", Channel.EMAIL);
+
+        orchestrator.process(NotificationTestData.defaultEvent());
+
+        ArgumentCaptor<Notification> captor =
+                ArgumentCaptor.forClass(Notification.class);
+
+        verify(notificationRepository, times(2)).save(captor.capture());
+
+        assertThat(captor.getAllValues().get(1)
+                .getStatus()).isEqualTo(NotificationStatus.FAILED);
+
+        assertThat(captor.getAllValues().get(1)
+                .getErrorMessage()).contains("Rate limit exceeded");
+
+        verify(providerRegistry, never()).getProvider(any());
+    }
+
+
+    @Test
     void shouldContinueOtherChannels_whenOneChannelFails() {
+        when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
         UserPreferences prefs = PreferenceTestData.entityWith(
                 "user-1", Set.of(Channel.EMAIL, Channel.SMS), "en", "UTC");
 
