@@ -58,7 +58,7 @@ spring:
   # ─── Thymeleaf ──────────────────────────────────────────────────────────────
   thymeleaf:
     prefix: classpath:/templates/
-    suffix: .html
+    suffix: ""
     cache: false
 
 server:

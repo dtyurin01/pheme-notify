@@ -45,12 +45,20 @@ class NotificationOrchestratorTest {
     @Mock
     private NotificationProvider smsProvider;
 
+    @Mock
+    private TemplateService templateService;
+
     @InjectMocks
     private NotificationOrchestrator orchestrator;
 
     @BeforeEach
     void setUp() {
-        lenient().when(notificationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(notificationRepository.save(
+                any())).thenAnswer(
+                        inv -> inv.getArgument(0));
+
+        lenient().when(templateService.render(any(), any(),
+                any())).thenReturn("rendered-template");
     }
 
     @Test

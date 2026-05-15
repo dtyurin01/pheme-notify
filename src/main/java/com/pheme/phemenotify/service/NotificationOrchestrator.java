@@ -31,6 +31,7 @@ public class NotificationOrchestrator {
     private final NotificationRepository notificationRepository;
     private final ProviderRegistry providerRegistry;
     private final RateLimitService rateLimitService;
+    private final TemplateService templateService;
 
     public void processRetry(NotificationEvent notificationEvent) {
         Optional<UserPreferences> preferences = userPreferenceRepository.findByUserId(notificationEvent.userId());
@@ -99,7 +100,11 @@ public class NotificationOrchestrator {
         }
 
         try {
-            String renderedTemplate = "TODO: render via TemplateService";
+            String renderedTemplate = templateService.render(
+                    notificationEvent.eventType(),
+                    channel,
+                    notificationEvent.payload()
+            );
             providerRegistry.getProvider(channel).send(notificationEvent, renderedTemplate);
             notification.setStatus(NotificationStatus.DELIVERED);
             notification.setSentAt(Instant.now());
