@@ -82,7 +82,8 @@ public class RedisRateLimitAdapterTest  extends BaseIntegrationTest {
     }
     @Test
     void shouldAllow_whenWindowExpired() throws InterruptedException {
-        long shortWindow = 100L; // 100ms
+        long shortWindow = 200L; // 200ms
+        long sleepMs = shortWindow * 3;
 
         for (int i = 0; i < MAX; i++) {
             rateLimitAdapter.isAllowed(
@@ -91,7 +92,7 @@ public class RedisRateLimitAdapterTest  extends BaseIntegrationTest {
         assertThat(rateLimitAdapter.isAllowed(
                 "user-1", "EMAIL", shortWindow, MAX)).isFalse();
 
-        Thread.sleep(200); // wait for window to expire
+        Thread.sleep(sleepMs); // wait for window to expire
 
         boolean allowed = rateLimitAdapter.isAllowed(
                 "user-1", "EMAIL", shortWindow, MAX);

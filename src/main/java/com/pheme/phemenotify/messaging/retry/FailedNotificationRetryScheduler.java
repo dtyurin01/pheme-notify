@@ -37,23 +37,22 @@ public class FailedNotificationRetryScheduler {
     }
 
     private void retry(FailedNotification failed) {
-        try {
-            NotificationEvent event = toEvent(failed);
-            notificationOrchestrator.processRetry(event);
+        NotificationEvent event = toEvent(failed);
+        boolean success = notificationOrchestrator.processRetry(event);
 
+        if (success) {
             failed.setStatus(NotificationStatus.DELIVERED);
             failed.setLastRetryAt(Instant.now());
             failedNotificationRepository.save(failed);
-
             log.info("Retry succeeded: id={}", failed.getId());
-        } catch (Exception e) {
+        } else {
             int newCount = failed.getRetryCount() + 1;
             failed.setRetryCount(newCount);
             failed.setLastRetryAt(Instant.now());
 
             if (newCount >= properties.getMaxAttempts()) {
                 failed.setStatus(NotificationStatus.FAILED);
-                log.error("Retry exhausted: id={}, marking FAILED", failed.getId(), e);
+                log.error("Retry exhausted: id={}, marking FAILED", failed.getId());
             } else {
                 long backoffSeconds = properties.getBackoffBaseSeconds() * (1L << (newCount - 1));
                 failed.setNextRetryAt(Instant.now().plusSeconds(backoffSeconds));

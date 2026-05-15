@@ -33,22 +33,20 @@ public class NotificationOrchestrator {
     private final RateLimitService rateLimitService;
     private final TemplateService templateService;
 
-    public void processRetry(NotificationEvent notificationEvent) {
+    public boolean processRetry(NotificationEvent notificationEvent) {
         Optional<UserPreferences> preferences = userPreferenceRepository.findByUserId(notificationEvent.userId());
 
         if (preferences.isEmpty()) {
             log.warn("No user preferences found for user {}, skipping retry", notificationEvent.userId());
-            return;
+            return false;
         }
 
         if (preferences.get().getEnabledChannels().isEmpty()) {
             log.warn("User {} has no enabled channels, skipping retry", notificationEvent.userId());
-            return;
+            return false;
         }
 
-        for (Channel channel : preferences.get().getEnabledChannels()) {
-            processChannel(notificationEvent, channel);
-        }
+        return processChannel(notificationEvent, notificationEvent.channel());
     }
 
     public void process(NotificationEvent notificationEvent) {
@@ -61,7 +59,7 @@ public class NotificationOrchestrator {
 
         if (preferences.isEmpty()) {
             log.warn("No user preferences found for user {}, skipping", notificationEvent.userId());
-            return;
+            return ;
         }
 
         if (preferences.get().getEnabledChannels().isEmpty()) {
@@ -74,7 +72,7 @@ public class NotificationOrchestrator {
         }
     }
 
-    private void processChannel(NotificationEvent notificationEvent, Channel channel) {
+    private boolean processChannel(NotificationEvent notificationEvent, Channel channel) {
         String idempotencyKey = IDEMPOTENCY_KEY_FORMAT.formatted(notificationEvent.id(), channel);
         Notification notification = Notification.pending(
                 notificationEvent.userId(),
@@ -86,17 +84,17 @@ public class NotificationOrchestrator {
             notificationRepository.save(notification);
         } catch (DataIntegrityViolationException e) {
             log.warn("Duplicate notification for key {}, skipping", idempotencyKey);
-            return;
+            return false;
         }
 
         try {
             rateLimitService.checkLimit(notificationEvent.userId(), channel);
-        }catch (RateLimitExceededException e) {
+        } catch (RateLimitExceededException e) {
             notification.setStatus(NotificationStatus.FAILED);
             notification.setErrorMessage("Rate limit exceeded: " + e.getMessage());
             notificationRepository.save(notification);
             log.warn("Rate limit exceeded for event {} on channel {}, skipping", notificationEvent.id(), channel);
-            return;
+            return false;
         }
 
         try {
@@ -110,11 +108,13 @@ public class NotificationOrchestrator {
             notification.setSentAt(Instant.now());
             notificationRepository.save(notification);
             log.info("Notification delivered to user {} via {}", notificationEvent.userId(), channel);
+            return true;
         } catch (Exception e) {
             notification.setStatus(NotificationStatus.FAILED);
             notification.setErrorMessage(e.getMessage());
             notificationRepository.save(notification);
             log.error("Failed to send via {}: {}", channel, e.getClass().getSimpleName(), e);
+            return false;
         }
     }
 }

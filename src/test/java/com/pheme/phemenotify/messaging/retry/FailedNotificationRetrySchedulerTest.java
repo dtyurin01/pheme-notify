@@ -52,6 +52,7 @@ class FailedNotificationRetrySchedulerTest {
         FailedNotification failed = FailedNotificationTestData.pending();
         when(failedNotificationRepository.findByStatusAndNextRetryAtBefore(any(), any()))
                 .thenReturn(List.of(failed));
+        when(notificationOrchestrator.processRetry(any())).thenReturn(true);
 
         scheduler.retryFailedNotifications();
 
@@ -70,7 +71,7 @@ class FailedNotificationRetrySchedulerTest {
                 .thenReturn(List.of(failed));
         when(properties.getMaxAttempts()).thenReturn(3);
         when(properties.getBackoffBaseSeconds()).thenReturn(300L);
-        doThrow(new RuntimeException("SMTP error")).when(notificationOrchestrator).processRetry(any());
+        when(notificationOrchestrator.processRetry(any())).thenReturn(false);
 
         scheduler.retryFailedNotifications();
 
@@ -89,7 +90,7 @@ class FailedNotificationRetrySchedulerTest {
         when(failedNotificationRepository.findByStatusAndNextRetryAtBefore(any(), any()))
                 .thenReturn(List.of(failed));
         when(properties.getMaxAttempts()).thenReturn(3);
-        doThrow(new RuntimeException("SMTP error")).when(notificationOrchestrator).processRetry(any());
+        when(notificationOrchestrator.processRetry(any())).thenReturn(false);
 
         scheduler.retryFailedNotifications();
 

@@ -5,10 +5,8 @@ import com.pheme.phemenotify.config.RateLimitProperties;
 import com.pheme.phemenotify.infrastructure.redis.RedisRateLimitAdapter;
 import com.pheme.phemenotify.persistence.entity.Channel;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RateLimitService {

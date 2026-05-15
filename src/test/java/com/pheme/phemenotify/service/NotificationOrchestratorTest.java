@@ -145,6 +145,26 @@ class NotificationOrchestratorTest {
         verify(providerRegistry, never()).getProvider(any());
     }
 
+    @Test
+    void shouldRetryOnlySpecificChannel_whenProcessRetry() {
+        UserPreferences prefs =
+                PreferenceTestData.entityWith(
+                        "user-1", Set.of(Channel.EMAIL, Channel.SMS),
+                        "en", "UTC");
+
+        when(userPreferenceRepository.findByUserId("user-1"))
+                .thenReturn(Optional.of(prefs));
+        when(providerRegistry.getProvider(Channel.EMAIL))
+                .thenReturn(emailProvider);
+        lenient().when(providerRegistry.getProvider(Channel.SMS))
+                .thenReturn(smsProvider);
+
+        orchestrator.processRetry(NotificationTestData.defaultEvent());
+
+        verify(emailProvider).send(any(), any());
+        verify(smsProvider, never()).send(any(), any());
+    }
+
 
     @Test
     void shouldContinueOtherChannels_whenOneChannelFails() {
