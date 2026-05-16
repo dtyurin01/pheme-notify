@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pheme.phemenotify.api.dto.request.CreatePreferenceRequest;
 import com.pheme.phemenotify.api.dto.response.PreferenceResponse;
 import com.pheme.phemenotify.api.exception.ResourceNotFoundException;
+import com.pheme.phemenotify.messaging.event.EventTypeDeserializer;
 import com.pheme.phemenotify.service.PreferenceService;
 import com.pheme.phemenotify.api.ApiPaths;
 import com.pheme.phemenotify.util.PreferenceTestData;
@@ -29,11 +30,13 @@ public class PreferenceControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @MockitoBean
     private PreferenceService preferenceService;
+
+    @MockitoBean
+    private EventTypeDeserializer eventTypeDeserializer;
 
 
     @Test

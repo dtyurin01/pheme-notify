@@ -1,18 +1,23 @@
 package com.pheme.phemenotify.api.exception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.net.URI;
 import java.util.UUID;
 
 @Slf4j
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ProblemDetail resourceNotFoundException(ResourceNotFoundException exception) {
@@ -22,8 +27,18 @@ public class GlobalExceptionHandler {
         return problem;
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ProblemDetail methodArgumentNotValidException(MethodArgumentNotValidException exception) {
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ProblemDetail handleRateLimit(RateLimitExceededException exception) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, exception.getMessage());
+        problem.setType(URI.create("https://pheme.com/errors/rate-limit-exceeded"));
+        problem.setTitle("Rate Limit Exceeded");
+        return problem;
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException exception,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         String detail = exception.getBindingResult().getFieldErrors().stream()
                 .map(e -> e.getField() + ": " + e.getDefaultMessage())
                 .findFirst()
@@ -31,7 +46,7 @@ public class GlobalExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
         problem.setType(URI.create("https://pheme.com/errors/validation-failed"));
         problem.setTitle("Validation Failed");
-        return problem;
+        return ResponseEntity.badRequest().body(problem);
     }
 
     @ExceptionHandler(Exception.class)

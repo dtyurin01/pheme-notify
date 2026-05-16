@@ -1,6 +1,7 @@
 package com.pheme.phemenotify.service;
 
 
+import com.pheme.phemenotify.api.exception.RateLimitExceededException;
 import com.pheme.phemenotify.infrastructure.redis.RedisDeduplicationAdapter;
 import com.pheme.phemenotify.messaging.event.NotificationEvent;
 import com.pheme.phemenotify.persistence.entity.Channel;
@@ -29,8 +30,31 @@ public class NotificationOrchestrator {
     private final UserPreferenceRepository userPreferenceRepository;
     private final NotificationRepository notificationRepository;
     private final ProviderRegistry providerRegistry;
+    private final RateLimitService rateLimitService;
+    private final TemplateService templateService;
+
+    public boolean processRetry(NotificationEvent notificationEvent) {
+        Optional<UserPreferences> preferences = userPreferenceRepository.findByUserId(notificationEvent.userId());
+
+        if (preferences.isEmpty()) {
+            log.warn("No user preferences found for user {}, skipping retry", notificationEvent.userId());
+            return false;
+        }
+
+        if (preferences.get().getEnabledChannels().isEmpty()) {
+            log.warn("User {} has no enabled channels, skipping retry", notificationEvent.userId());
+            return false;
+        }
+
+        return processChannel(notificationEvent, notificationEvent.channel());
+    }
 
     public void process(NotificationEvent notificationEvent) {
+        if (!deduplicationAdapter.isNew(notificationEvent.id())) {
+            log.warn("Duplicate event {}, skipping", notificationEvent.id());
+            return;
+        }
+
         Optional<UserPreferences> preferences = userPreferenceRepository.findByUserId(notificationEvent.userId());
 
         if (preferences.isEmpty()) {
@@ -43,17 +67,12 @@ public class NotificationOrchestrator {
             return;
         }
 
-        if (!deduplicationAdapter.isNew(notificationEvent.id())) {
-            log.warn("Duplicate event {}, skipping", notificationEvent.id());
-            return;
-        }
-
         for (Channel channel : preferences.get().getEnabledChannels()) {
             processChannel(notificationEvent, channel);
         }
     }
 
-    private void processChannel(NotificationEvent notificationEvent, Channel channel) {
+    private boolean processChannel(NotificationEvent notificationEvent, Channel channel) {
         String idempotencyKey = IDEMPOTENCY_KEY_FORMAT.formatted(notificationEvent.id(), channel);
         Notification notification = Notification.pending(
                 notificationEvent.userId(),
@@ -65,21 +84,37 @@ public class NotificationOrchestrator {
             notificationRepository.save(notification);
         } catch (DataIntegrityViolationException e) {
             log.warn("Duplicate notification for key {}, skipping", idempotencyKey);
-            return;
+            return false;
         }
 
         try {
-            String renderedTemplate = "TODO: render via TemplateService";
+            rateLimitService.checkLimit(notificationEvent.userId(), channel);
+        } catch (RateLimitExceededException e) {
+            notification.setStatus(NotificationStatus.FAILED);
+            notification.setErrorMessage(e.getMessage());
+            notificationRepository.save(notification);
+            log.warn("Rate limit exceeded for event {} on channel {}, skipping", notificationEvent.id(), channel);
+            return false;
+        }
+
+        try {
+            String renderedTemplate = templateService.render(
+                    notificationEvent.eventType(),
+                    channel,
+                    notificationEvent.payload()
+            );
             providerRegistry.getProvider(channel).send(notificationEvent, renderedTemplate);
             notification.setStatus(NotificationStatus.DELIVERED);
             notification.setSentAt(Instant.now());
             notificationRepository.save(notification);
             log.info("Notification delivered to user {} via {}", notificationEvent.userId(), channel);
+            return true;
         } catch (Exception e) {
             notification.setStatus(NotificationStatus.FAILED);
             notification.setErrorMessage(e.getMessage());
             notificationRepository.save(notification);
             log.error("Failed to send via {}: {}", channel, e.getClass().getSimpleName(), e);
+            return false;
         }
     }
 }
