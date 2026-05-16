@@ -26,6 +26,7 @@ local seq = redis.call('INCR', key .. ':seq')
 redis.call('ZADD', key, now, now .. ':' .. seq)
 
 -- Reset TTL so Redis auto-deletes the key when the window expires
+redis.call('PEXPIRE', key, window)
 redis.call('PEXPIRE', key .. ':seq', window)
 
 return 0

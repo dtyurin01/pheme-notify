@@ -59,7 +59,7 @@ public class NotificationOrchestrator {
 
         if (preferences.isEmpty()) {
             log.warn("No user preferences found for user {}, skipping", notificationEvent.userId());
-            return ;
+            return;
         }
 
         if (preferences.get().getEnabledChannels().isEmpty()) {
@@ -91,7 +91,7 @@ public class NotificationOrchestrator {
             rateLimitService.checkLimit(notificationEvent.userId(), channel);
         } catch (RateLimitExceededException e) {
             notification.setStatus(NotificationStatus.FAILED);
-            notification.setErrorMessage("Rate limit exceeded: " + e.getMessage());
+            notification.setErrorMessage(e.getMessage());
             notificationRepository.save(notification);
             log.warn("Rate limit exceeded for event {} on channel {}, skipping", notificationEvent.id(), channel);
             return false;
