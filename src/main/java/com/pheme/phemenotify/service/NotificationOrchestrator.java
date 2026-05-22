@@ -17,6 +17,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Optional;
 
 @Slf4j
@@ -34,15 +35,12 @@ public class NotificationOrchestrator {
     private final TemplateService templateService;
 
     public boolean processRetry(NotificationEvent notificationEvent) {
-        Optional<UserPreferences> preferences = userPreferenceRepository.findByUserId(notificationEvent.userId());
+        Optional<UserPreferences> preferences = resolvePreferences(notificationEvent.userId());
+        if (preferences.isEmpty()) return false;
 
-        if (preferences.isEmpty()) {
-            log.warn("No user preferences found for user {}, skipping retry", notificationEvent.userId());
-            return false;
-        }
-
-        if (preferences.get().getEnabledChannels().isEmpty()) {
-            log.warn("User {} has no enabled channels, skipping retry", notificationEvent.userId());
+        if (!preferences.get().getEnabledChannels().contains(notificationEvent.channel())) {
+            log.warn("Channel {} is not enabled for user {}, skipping retry",
+                    notificationEvent.channel(), notificationEvent.userId());
             return false;
         }
 
@@ -55,21 +53,28 @@ public class NotificationOrchestrator {
             return;
         }
 
-        Optional<UserPreferences> preferences = userPreferenceRepository.findByUserId(notificationEvent.userId());
-
-        if (preferences.isEmpty()) {
-            log.warn("No user preferences found for user {}, skipping", notificationEvent.userId());
-            return;
-        }
-
-        if (preferences.get().getEnabledChannels().isEmpty()) {
-            log.warn("User {} has no enabled channels, skipping", notificationEvent.userId());
-            return;
-        }
+        Optional<UserPreferences> preferences = resolvePreferences(notificationEvent.userId());
+        if (preferences.isEmpty()) return;
 
         for (Channel channel : preferences.get().getEnabledChannels()) {
             processChannel(notificationEvent, channel);
         }
+    }
+
+    private Optional<UserPreferences> resolvePreferences(String userId) {
+        Optional<UserPreferences> preferences = userPreferenceRepository.findByUserId(userId);
+
+        if (preferences.isEmpty()) {
+            log.warn("No user preferences found for user {}, skipping", userId);
+            return Optional.empty();
+        }
+
+        if (preferences.get().getEnabledChannels().isEmpty()) {
+            log.warn("User {} has no enabled channels, skipping", userId);
+            return Optional.empty();
+        }
+
+        return preferences;
     }
 
     private boolean processChannel(NotificationEvent notificationEvent, Channel channel) {
@@ -91,9 +96,9 @@ public class NotificationOrchestrator {
             rateLimitService.checkLimit(notificationEvent.userId(), channel);
         } catch (RateLimitExceededException e) {
             notification.setStatus(NotificationStatus.FAILED);
-            notification.setErrorMessage(e.getMessage());
+            notification.setErrorMessage("RATE_LIMIT_EXCEEDED");
             notificationRepository.save(notification);
-            log.warn("Rate limit exceeded for event {} on channel {}, skipping", notificationEvent.id(), channel);
+            log.warn("Rate limit exceeded for event {} on channel {}: {}", notificationEvent.id(), channel, e.getMessage());
             return false;
         }
 
@@ -101,7 +106,7 @@ public class NotificationOrchestrator {
             String renderedTemplate = templateService.render(
                     notificationEvent.eventType(),
                     channel,
-                    notificationEvent.payload()
+                    new HashMap<>(notificationEvent.payload())
             );
             providerRegistry.getProvider(channel).send(notificationEvent, renderedTemplate);
             notification.setStatus(NotificationStatus.DELIVERED);
@@ -111,9 +116,9 @@ public class NotificationOrchestrator {
             return true;
         } catch (Exception e) {
             notification.setStatus(NotificationStatus.FAILED);
-            notification.setErrorMessage(e.getMessage());
+            notification.setErrorMessage("SEND_FAILED:" + e.getClass().getSimpleName());
             notificationRepository.save(notification);
-            log.error("Failed to send via {}: {}", channel, e.getClass().getSimpleName(), e);
+            log.error("Failed to send via {}: {}", channel, e.getMessage(), e);
             return false;
         }
     }

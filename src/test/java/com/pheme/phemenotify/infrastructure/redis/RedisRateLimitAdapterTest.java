@@ -99,4 +99,15 @@ public class RedisRateLimitAdapterTest  extends BaseIntegrationTest {
 
         assertThat(allowed).isTrue();
     }
+
+    @Test
+    void shouldAllowExactlyMaxRequests_whenBurst(){
+        int allowed = 0;
+        for (int i = 0; i < 100; i++) {
+            if(rateLimitAdapter.isAllowed("user-1", "EMAIL", WINDOW_MS, MAX)){
+                allowed++;
+            }
+        }
+        assertThat(allowed).isEqualTo(MAX); // 5 in this case
+    }
 }

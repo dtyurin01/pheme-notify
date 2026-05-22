@@ -13,6 +13,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 
+import java.time.Duration;
+
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
@@ -34,11 +36,11 @@ public class RateLimitServiceTest {
     @BeforeEach
     void setUp() {
         RateLimitProperties.ChannelLimit emailLimit = new
-                RateLimitProperties.ChannelLimit(5, 1);
+                RateLimitProperties.ChannelLimit(5, Duration.ofHours(1));
         RateLimitProperties.ChannelLimit smsLimit   = new
-                RateLimitProperties.ChannelLimit(3, 1);
+                RateLimitProperties.ChannelLimit(3, Duration.ofHours(1));
         RateLimitProperties.ChannelLimit pushLimit  = new
-                RateLimitProperties.ChannelLimit(20, 1);
+                RateLimitProperties.ChannelLimit(20, Duration.ofHours(1));
 
         lenient().when(properties.getEmail()).thenReturn(emailLimit);
         lenient().when(properties.getSms()).thenReturn(smsLimit);

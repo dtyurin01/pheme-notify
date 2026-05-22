@@ -19,18 +19,18 @@ import java.util.Map;
 public class TemplateService {
     private final SpringTemplateEngine templateEngine;
 
-    public String render(EventType eventType, Channel channel, Map<String, String> payload) {
+    public String render(EventType eventType, Channel channel, Map<String, Object> payload) {
 
         String templateName = resolveTemplateName(eventType, channel);
 
         Context context = new Context();
-        context.setVariables(Map.copyOf(payload));
+        context.setVariables(payload);
 
-        try{
+        try {
             return templateEngine.process(templateName, context);
-        }catch(TemplateInputException e){
-            log.warn("Template not found: {}", templateName);
-            throw new TemplateNotFoundException(templateName);
+        } catch (TemplateInputException e) {
+            log.warn("Template not found: {}", templateName, e);
+            throw new TemplateNotFoundException(templateName, e);
         }
     }
 
@@ -42,6 +42,6 @@ public class TemplateService {
 
         String extension = channel == Channel.EMAIL ? "html" : "txt";
 
-        return channelDir + "/" + code + "." +extension;
+        return channelDir + "/" + code + "." + extension;
     }
 }
