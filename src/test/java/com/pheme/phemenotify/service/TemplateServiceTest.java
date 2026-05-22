@@ -92,7 +92,7 @@ public class TemplateServiceTest {
                 contextCaptor.capture()))
                 .thenReturn("rendered");
 
-        Map<String, String> payload = Map.of("orderId", "123", "amount", "500");
+        Map<String, Object> payload = Map.of("orderId", "123", "amount", "500");
 
         templateService.render(
                 new OrderCompletedEventType(),
@@ -123,18 +123,36 @@ public class TemplateServiceTest {
 
     @Test
     void shouldThrowTemplateNotFoundException_whenTemplateNotFound() {
+        TemplateInputException exception = new TemplateInputException("not found", new RuntimeException());
         when(templateEngine.process(any(String.class),
                 any(IContext.class)))
-                .thenThrow(new
-                        TemplateInputException("not found", new
-                        RuntimeException()));
+                .thenThrow(exception);
 
         assertThatThrownBy(() -> templateService.render(
                 new OrderCompletedEventType(),
                 Channel.EMAIL,
                 Map.of()
-        )).isInstanceOf(TemplateNotFoundException.class)
-                .hasMessageContaining("email/order-completed.html");
+        ))
+                .isInstanceOf(TemplateNotFoundException.class)
+                .hasMessageContaining("email/order-completed.html")
+                .hasCause(exception);
+    }
+
+    @Test
+    void shouldNotWrap_whenNonTemplateInoutExceptionThrown(){
+        RuntimeException exception = new RuntimeException("unexpected engine failure");
+        when(templateEngine.process(any(String.class),
+                any(IContext.class)))
+                    .thenThrow(exception);
+
+        assertThatThrownBy(() -> templateService.render(
+                new OrderCompletedEventType(),
+                Channel.EMAIL,
+                Map.of()
+        ))
+                .isInstanceOf(RuntimeException.class)
+                .isNotInstanceOf(TemplateNotFoundException.class)
+                .hasMessage("unexpected engine failure");
     }
 }
 

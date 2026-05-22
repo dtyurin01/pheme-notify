@@ -78,18 +78,27 @@ management:
       export:
         enabled: true
 
+# ─── Resilience4j Circuit Breaker ────────────────────────────────────────────
+pheme:
+  resilience:
+    email:
+      sliding-window-size: 10        # number of calls in the window for failure rate calculation
+      failure-rate-threshold: 50     # failure % threshold to open the circuit breaker
+      wait-duration-in-open-state: 30s  # how long CB stays OPEN before trying HALF_OPEN
+      permitted-calls-in-half-open: 3 # calls in HALF_OPEN to decide whether to close
+
 # ─── Notification ────────────────────────────────────────────────────────────
 notification:
   rate-limit:
     email:
       max-requests: 5
-      window-hours: 1
+      window: 1h
     sms:
       max-requests: 3
-      window-hours: 1
+      window: 1h
     push:
       max-requests: 20
-      window-hours: 1
+      window: 1h
   retry-scheduler:
     max-attempts: 3
     backoff-base-seconds: 300

@@ -140,7 +140,7 @@ class NotificationOrchestratorTest {
                 .getStatus()).isEqualTo(NotificationStatus.FAILED);
 
         assertThat(captor.getAllValues().get(1)
-                .getErrorMessage()).contains("Rate limit exceeded");
+                .getErrorMessage()).contains("max 5 email notifications per 1h");
 
         verify(providerRegistry, never()).getProvider(any());
     }

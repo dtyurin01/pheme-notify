@@ -1,36 +1,52 @@
 package com.pheme.phemenotify.config;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
-import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.Duration;
 
 @Getter
-@Setter
 @Component
+@Validated
 @ConfigurationProperties(prefix = "notification.rate-limit")
 public class RateLimitProperties {
 
-    private ChannelLimit email = new ChannelLimit(5, 1);
-    private ChannelLimit sms   = new ChannelLimit(3, 1);
-    private ChannelLimit push  = new ChannelLimit(20, 1);
+    /** Email limit: 5 requests per hour. Property: notification.rate-limit.email */
+    @Valid
+    private ChannelLimit email = new ChannelLimit(5, Duration.ofHours(1));
+
+    /** SMS limit: 3 requests per hour. Property: notification.rate-limit.sms */
+    @Valid
+    private ChannelLimit sms = new ChannelLimit(3, Duration.ofHours(1));
+
+    /** Push limit: 20 requests per hour. Property: notification.rate-limit.push */
+    @Valid
+    private ChannelLimit push = new ChannelLimit(20, Duration.ofHours(1));
+
+    // Needed for setter-based binding of top-level fields
+    public void setEmail(ChannelLimit email) { this.email = email; }
+    public void setSms(ChannelLimit sms)     { this.sms = sms; }
+    public void setPush(ChannelLimit push)   { this.push = push; }
 
     @Getter
-    @Setter
     public static class ChannelLimit {
 
-        private int maxRequests;
-        private int windowHours;
+        @Min(1)
+        private final int maxRequests;
 
-        public ChannelLimit(int maxRequests, int windowHours) {
+        @NotNull
+        private final Duration window;
+
+        @ConstructorBinding
+        public ChannelLimit(int maxRequests, Duration window) {
             this.maxRequests = maxRequests;
-            this.windowHours = windowHours;
-        }
-
-        public long windowMillis() {
-            return Duration.ofHours(windowHours).toMillis();
+            this.window = window;
         }
     }
 }
