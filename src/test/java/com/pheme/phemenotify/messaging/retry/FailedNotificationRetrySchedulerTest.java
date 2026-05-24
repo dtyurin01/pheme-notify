@@ -13,6 +13,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -70,7 +71,7 @@ class FailedNotificationRetrySchedulerTest {
         when(failedNotificationRepository.findByStatusAndNextRetryAtBefore(any(), any()))
                 .thenReturn(List.of(failed));
         when(properties.getMaxAttempts()).thenReturn(3);
-        when(properties.getBackoffBaseSeconds()).thenReturn(300L);
+        when(properties.getBackoffBase()).thenReturn(Duration.ofSeconds(300));
         when(notificationOrchestrator.processRetry(any())).thenReturn(false);
 
         scheduler.retryFailedNotifications();

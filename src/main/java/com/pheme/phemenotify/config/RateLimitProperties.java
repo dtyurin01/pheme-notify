@@ -5,14 +5,11 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.bind.ConstructorBinding;
-import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.Duration;
 
 @Getter
-@Component
 @Validated
 @ConfigurationProperties(prefix = "notification.rate-limit")
 public class RateLimitProperties {
@@ -34,19 +31,5 @@ public class RateLimitProperties {
     public void setSms(ChannelLimit sms)     { this.sms = sms; }
     public void setPush(ChannelLimit push)   { this.push = push; }
 
-    @Getter
-    public static class ChannelLimit {
-
-        @Min(1)
-        private final int maxRequests;
-
-        @NotNull
-        private final Duration window;
-
-        @ConstructorBinding
-        public ChannelLimit(int maxRequests, Duration window) {
-            this.maxRequests = maxRequests;
-            this.window = window;
-        }
-    }
+    public record ChannelLimit(@Min(1) int maxRequests, @NotNull Duration window) {}
 }
