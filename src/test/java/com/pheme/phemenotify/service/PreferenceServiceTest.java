@@ -54,8 +54,8 @@ public class PreferenceServiceTest {
         when(userPreferenceRepository.findByUserId("unknown")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> preferenceService.getByUserId("unknown"))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("unknown");
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessageContaining("unknown");
     }
 
     @Test
@@ -74,7 +74,7 @@ public class PreferenceServiceTest {
     @Test
     void shouldUpdateEnabledChannels_whenUserExists() {
         UserPreferences existing = PreferenceTestData.entityWith("user-1", Set.of(Channel.EMAIL), "en-US", "UTC");
-        CreatePreferenceRequest updateRequest = new CreatePreferenceRequest(Set.of(Channel.EMAIL,Channel.SMS), null, null);
+        CreatePreferenceRequest updateRequest = new CreatePreferenceRequest(Set.of(Channel.EMAIL, Channel.SMS), null, null);
 
         when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(existing));
 
@@ -85,7 +85,7 @@ public class PreferenceServiceTest {
     }
 
     @Test
-    void shouldNotOverrideLocale_whenLocaleIsNull(){
+    void shouldNotOverrideLocale_whenLocaleIsNull() {
         UserPreferences existing = PreferenceTestData.entityWith("user-1", Set.of(Channel.EMAIL), "fr", "UTC");
         CreatePreferenceRequest updateRequest = new CreatePreferenceRequest(Set.of(Channel.SMS), null, null);
 

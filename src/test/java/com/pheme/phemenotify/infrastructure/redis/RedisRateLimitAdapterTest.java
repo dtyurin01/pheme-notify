@@ -8,7 +8,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class RedisRateLimitAdapterTest  extends BaseIntegrationTest {
+public class RedisRateLimitAdapterTest extends BaseIntegrationTest {
 
     @Autowired
     private RedisRateLimitAdapter rateLimitAdapter;
@@ -20,26 +20,26 @@ public class RedisRateLimitAdapterTest  extends BaseIntegrationTest {
     private static final int MAX = 5;
 
     @AfterEach
-    void cleanUp(){
+    void cleanUp() {
         stringRedisTemplate.getConnectionFactory()
-                .getConnection()
-                .serverCommands()
-                .flushDb();
+            .getConnection()
+            .serverCommands()
+            .flushDb();
     }
 
     @Test
-    void shouldAllow_whenFirstRequest(){
+    void shouldAllow_whenFirstRequest() {
         boolean allowed = rateLimitAdapter.isAllowed(
-                "user-1", "EMAIL", WINDOW_MS, MAX);
+            "user-1", "EMAIL", WINDOW_MS, MAX);
 
         assertThat(allowed).isTrue();
     }
 
     @Test
-    void shouldAllow_whenUnderLimit(){
-        for (int i = 0; i < 4; i++){
+    void shouldAllow_whenUnderLimit() {
+        for (int i = 0; i < 4; i++) {
             boolean allowed = rateLimitAdapter.isAllowed(
-                    "user-1", "EMAIL", WINDOW_MS, MAX);
+                "user-1", "EMAIL", WINDOW_MS, MAX);
             assertThat(allowed).isTrue();
         }
     }
@@ -48,38 +48,40 @@ public class RedisRateLimitAdapterTest  extends BaseIntegrationTest {
     void shouldBlock_whenLimitReached() {
         for (int i = 0; i < MAX; i++) {
             rateLimitAdapter.isAllowed(
-                    "user-1", "EMAIL", WINDOW_MS, MAX);
+                "user-1", "EMAIL", WINDOW_MS, MAX);
         }
 
         boolean sixthRequest = rateLimitAdapter.isAllowed(
-                "user-1", "EMAIL", WINDOW_MS, MAX);
+            "user-1", "EMAIL", WINDOW_MS, MAX);
 
         assertThat(sixthRequest).isFalse();
     }
 
     @Test
-    void shouldIsolate_whenDifferentUsers(){
-        for (int i = 0; i < MAX; i++){
+    void shouldIsolate_whenDifferentUsers() {
+        for (int i = 0; i < MAX; i++) {
             rateLimitAdapter.isAllowed(
-                    "user-1", "EMAIL", WINDOW_MS, MAX);
+                "user-1", "EMAIL", WINDOW_MS, MAX);
         }
         boolean user2Allowed = rateLimitAdapter.isAllowed(
-                "user-2", "EMAIL", WINDOW_MS, MAX);
+            "user-2", "EMAIL", WINDOW_MS, MAX);
 
         assertThat(user2Allowed).isTrue();
     }
+
     @Test
     void shouldIsolate_whenDifferentChannels() {
         for (int i = 0; i < MAX; i++) {
             rateLimitAdapter.isAllowed(
-                    "user-1", "EMAIL", WINDOW_MS, MAX);
+                "user-1", "EMAIL", WINDOW_MS, MAX);
         }
 
         boolean smsAllowed = rateLimitAdapter.isAllowed(
-                "user-1", "SMS", WINDOW_MS, MAX);
+            "user-1", "SMS", WINDOW_MS, MAX);
 
         assertThat(smsAllowed).isTrue();
     }
+
     @Test
     void shouldAllow_whenWindowExpired() throws InterruptedException {
         long shortWindow = 200L; // 200ms
@@ -87,24 +89,24 @@ public class RedisRateLimitAdapterTest  extends BaseIntegrationTest {
 
         for (int i = 0; i < MAX; i++) {
             rateLimitAdapter.isAllowed(
-                    "user-1", "EMAIL", shortWindow, MAX);
+                "user-1", "EMAIL", shortWindow, MAX);
         }
         assertThat(rateLimitAdapter.isAllowed(
-                "user-1", "EMAIL", shortWindow, MAX)).isFalse();
+            "user-1", "EMAIL", shortWindow, MAX)).isFalse();
 
         Thread.sleep(sleepMs); // wait for window to expire
 
         boolean allowed = rateLimitAdapter.isAllowed(
-                "user-1", "EMAIL", shortWindow, MAX);
+            "user-1", "EMAIL", shortWindow, MAX);
 
         assertThat(allowed).isTrue();
     }
 
     @Test
-    void shouldAllowExactlyMaxRequests_whenBurst(){
+    void shouldAllowExactlyMaxRequests_whenBurst() {
         int allowed = 0;
         for (int i = 0; i < 100; i++) {
-            if(rateLimitAdapter.isAllowed("user-1", "EMAIL", WINDOW_MS, MAX)){
+            if (rateLimitAdapter.isAllowed("user-1", "EMAIL", WINDOW_MS, MAX)) {
                 allowed++;
             }
         }

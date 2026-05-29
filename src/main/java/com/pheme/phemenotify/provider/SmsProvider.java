@@ -6,10 +6,9 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class SmsProvider implements NotificationProvider
-{
+public class SmsProvider implements NotificationProvider {
     @Override
-    public void send(NotificationEvent event, String renderedTemplate){
+    public void send(NotificationEvent event, String renderedTemplate) {
         log.info("SMS Sent to user {}: {}", event.userId(), renderedTemplate);
     }
 }

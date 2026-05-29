@@ -1,11 +1,11 @@
 package com.pheme.phemenotify.persistence.entity;
 
+import org.springframework.stereotype.Component;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
-import org.springframework.stereotype.Component;
 
 @Component
 public class EventTypeRegistry {
@@ -13,12 +13,12 @@ public class EventTypeRegistry {
 
     public EventTypeRegistry(List<EventType> eventTypes) {
         this.registry = eventTypes.stream()
-        .collect(Collectors.toUnmodifiableMap(
-            EventType::getCode,
-            type -> type,
-            (existing, replacement) -> {
+            .collect(Collectors.toUnmodifiableMap(
+                EventType::getCode,
+                type -> type,
+                (existing, replacement) -> {
                     throw new IllegalStateException("Duplicate EventType code detected: " + existing.getCode());
-            }));
+                }));
     }
 
     // string get

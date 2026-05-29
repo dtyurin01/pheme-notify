@@ -17,34 +17,34 @@ public class PreferenceService {
     @Transactional(readOnly = true)
     public PreferenceResponse getByUserId(String userId) {
         return repository.findByUserId(userId)
-                .map(this::toResponse)
-                .orElseThrow(() -> new ResourceNotFoundException("Preferences not found for user: " + userId));
+            .map(this::toResponse)
+            .orElseThrow(() -> new ResourceNotFoundException("Preferences not found for user: " + userId));
     }
 
     @Transactional
     public PreferenceResponse upsert(String userId, CreatePreferenceRequest createPreferenceRequest) {
         UserPreferences userPreferences = repository.findByUserId(userId)
-                .orElseGet(() -> UserPreferences.builder().userId(userId).build());
+            .orElseGet(() -> UserPreferences.builder().userId(userId).build());
 
         userPreferences.setEnabledChannels(createPreferenceRequest.enabledChannels());
 
-        if(createPreferenceRequest.locale() != null) {
+        if (createPreferenceRequest.locale() != null) {
             userPreferences.setLocale(createPreferenceRequest.locale());
         }
-        if(createPreferenceRequest.timezone() != null) {
+        if (createPreferenceRequest.timezone() != null) {
             userPreferences.setTimezone(createPreferenceRequest.timezone());
         }
 
         return toResponse(repository.save(userPreferences));
     }
 
-    private PreferenceResponse toResponse(UserPreferences entity){
+    private PreferenceResponse toResponse(UserPreferences entity) {
         return new PreferenceResponse(
-                entity.getUserId(),
-                entity.getEnabledChannels(),
-                entity.getLocale(),
-                entity.getTimezone(),
-                entity.isEnabled()
+            entity.getUserId(),
+            entity.getEnabledChannels(),
+            entity.getLocale(),
+            entity.getTimezone(),
+            entity.isEnabled()
         );
     }
 }

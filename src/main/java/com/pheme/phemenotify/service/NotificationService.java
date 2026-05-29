@@ -7,6 +7,7 @@ import com.pheme.phemenotify.persistence.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.UUID;
 
 @Service
@@ -17,20 +18,20 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public NotificationResponse getById(UUID id) {
         return notificationRepository.findById(id)
-                .map(this::toResponse)
-                .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + id));
+            .map(this::toResponse)
+            .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + id));
     }
 
     private NotificationResponse toResponse(Notification entity) {
         return new NotificationResponse(
-                entity.getId(),
-                entity.getUserId(),
-                entity.getChannel(),
-                entity.getEventType().getCode(),
-                entity.getStatus(),
-                entity.getErrorMessage(),
-                entity.getCreatedAt(),
-                entity.getSentAt()
+            entity.getId(),
+            entity.getUserId(),
+            entity.getChannel(),
+            entity.getEventType().getCode(),
+            entity.getStatus(),
+            entity.getErrorMessage(),
+            entity.getCreatedAt(),
+            entity.getSentAt()
         );
     }
 }

@@ -101,8 +101,8 @@ notification:
       window: 1h
   retry-scheduler:
     max-attempts: 3
-    backoff-base-seconds: 300
-    fixed-delay-ms: 60000
+    backoff-base: 5m
+    fixed-delay: PT1M
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
 logging:

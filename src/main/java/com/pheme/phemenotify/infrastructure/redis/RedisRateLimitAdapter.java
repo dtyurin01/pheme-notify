@@ -22,24 +22,24 @@ public class RedisRateLimitAdapter {
     public boolean isAllowed(String userId,
                              String channel,
                              long windowMillis,
-                             int maxRequests){
+                             int maxRequests) {
 
         String key = KEY_PREFIX + userId + ":" + channel;
         long now = System.currentTimeMillis();
 
         Long result = redisTemplate.execute(
-                rateLimitScript,
-                List.of(key),
-                String.valueOf(now),
-                String.valueOf(windowMillis),
-                String.valueOf(maxRequests)
+            rateLimitScript,
+            List.of(key),
+            String.valueOf(now),
+            String.valueOf(windowMillis),
+            String.valueOf(maxRequests)
         );
 
         boolean allowed = result != null && result == 0L;
 
-        if(!allowed){
+        if (!allowed) {
             log.warn("Rate limit exceeded for user {} on channel {}, window {} ms, max {} requests",
-                    userId, channel, windowMillis, maxRequests);
+                userId, channel, windowMillis, maxRequests);
         }
 
         return allowed;

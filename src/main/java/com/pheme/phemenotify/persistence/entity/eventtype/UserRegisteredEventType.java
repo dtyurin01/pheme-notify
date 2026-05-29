@@ -1,8 +1,8 @@
 
 package com.pheme.phemenotify.persistence.entity.eventtype;
 
-import org.springframework.stereotype.Component;
 import com.pheme.phemenotify.persistence.entity.EventType;
+import org.springframework.stereotype.Component;
 
 @Component
 public class UserRegisteredEventType implements EventType {

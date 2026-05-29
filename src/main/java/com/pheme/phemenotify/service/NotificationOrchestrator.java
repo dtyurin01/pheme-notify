@@ -40,7 +40,7 @@ public class NotificationOrchestrator {
 
         if (!preferences.get().getEnabledChannels().contains(notificationEvent.channel())) {
             log.warn("Channel {} is not enabled for user {}, skipping retry",
-                    notificationEvent.channel(), notificationEvent.userId());
+                notificationEvent.channel(), notificationEvent.userId());
             return false;
         }
 
@@ -80,10 +80,10 @@ public class NotificationOrchestrator {
     private boolean processChannel(NotificationEvent notificationEvent, Channel channel) {
         String idempotencyKey = IDEMPOTENCY_KEY_FORMAT.formatted(notificationEvent.id(), channel);
         Notification notification = Notification.pending(
-                notificationEvent.userId(),
-                notificationEvent.eventType(),
-                channel,
-                idempotencyKey
+            notificationEvent.userId(),
+            notificationEvent.eventType(),
+            channel,
+            idempotencyKey
         );
         try {
             notificationRepository.save(notification);
@@ -104,9 +104,9 @@ public class NotificationOrchestrator {
 
         try {
             String renderedTemplate = templateService.render(
-                    notificationEvent.eventType(),
-                    channel,
-                    new HashMap<>(notificationEvent.payload())
+                notificationEvent.eventType(),
+                channel,
+                new HashMap<>(notificationEvent.payload())
             );
             providerRegistry.getProvider(channel).send(notificationEvent, renderedTemplate);
             notification.setStatus(NotificationStatus.DELIVERED);

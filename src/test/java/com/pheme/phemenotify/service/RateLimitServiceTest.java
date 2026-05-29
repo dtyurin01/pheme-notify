@@ -36,11 +36,11 @@ public class RateLimitServiceTest {
     @BeforeEach
     void setUp() {
         RateLimitProperties.ChannelLimit emailLimit = new
-                RateLimitProperties.ChannelLimit(5, Duration.ofHours(1));
-        RateLimitProperties.ChannelLimit smsLimit   = new
-                RateLimitProperties.ChannelLimit(3, Duration.ofHours(1));
-        RateLimitProperties.ChannelLimit pushLimit  = new
-                RateLimitProperties.ChannelLimit(20, Duration.ofHours(1));
+            RateLimitProperties.ChannelLimit(5, Duration.ofHours(1));
+        RateLimitProperties.ChannelLimit smsLimit = new
+            RateLimitProperties.ChannelLimit(3, Duration.ofHours(1));
+        RateLimitProperties.ChannelLimit pushLimit = new
+            RateLimitProperties.ChannelLimit(20, Duration.ofHours(1));
 
         lenient().when(properties.getEmail()).thenReturn(emailLimit);
         lenient().when(properties.getSms()).thenReturn(smsLimit);
@@ -48,18 +48,18 @@ public class RateLimitServiceTest {
     }
 
     @Test
-    void shouldNotThrow_whenAllowed(){
+    void shouldNotThrow_whenAllowed() {
         when(rateLimitAdapter.isAllowed(any(), any(), anyLong(), anyInt()))
-                .thenReturn(true);
+            .thenReturn(true);
 
         assertThatCode(() -> rateLimitService.checkLimit("user-1", Channel.EMAIL))
-                .doesNotThrowAnyException();
+            .doesNotThrowAnyException();
     }
 
     @Test
-    void shouldThrowRateLimitExceededException_whenNotAllowed(){
+    void shouldThrowRateLimitExceededException_whenNotAllowed() {
         when(rateLimitAdapter.isAllowed(any(), any(), anyLong(), anyInt()))
-                .thenReturn(false);
+            .thenReturn(false);
 
         assertThatThrownBy(() -> rateLimitService.checkLimit("user-1", Channel.EMAIL))
             .isInstanceOf(RateLimitExceededException.class)
@@ -69,7 +69,7 @@ public class RateLimitServiceTest {
     @Test
     void shouldPassCorrectLimits_whenEmailChannel() {
         when(rateLimitAdapter.isAllowed(any(), any(), anyLong(),
-                anyInt())).thenReturn(true);
+            anyInt())).thenReturn(true);
 
         rateLimitService.checkLimit("user-1", Channel.EMAIL);
 
@@ -79,7 +79,7 @@ public class RateLimitServiceTest {
     @Test
     void shouldPassCorrectLimits_whenSmsChannel() {
         when(rateLimitAdapter.isAllowed(any(), any(), anyLong(),
-                anyInt())).thenReturn(true);
+            anyInt())).thenReturn(true);
 
         rateLimitService.checkLimit("user-1", Channel.SMS);
 
@@ -89,7 +89,7 @@ public class RateLimitServiceTest {
     @Test
     void shouldPassCorrectLimits_whenPushChannel() {
         when(rateLimitAdapter.isAllowed(any(), any(), anyLong(),
-                anyInt())).thenReturn(true);
+            anyInt())).thenReturn(true);
 
         rateLimitService.checkLimit("user-1", Channel.PUSH);
 

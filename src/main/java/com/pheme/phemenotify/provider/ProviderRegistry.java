@@ -12,9 +12,9 @@ public class ProviderRegistry {
 
     public ProviderRegistry(EmailProvider emailProvider, SmsProvider smsProvider, PushProvider pushProvider) {
         this.providers = Map.of(
-                Channel.EMAIL, emailProvider,
-                Channel.SMS, smsProvider,
-                Channel.PUSH, pushProvider
+            Channel.EMAIL, emailProvider,
+            Channel.SMS, smsProvider,
+            Channel.PUSH, pushProvider
         );
     }
 

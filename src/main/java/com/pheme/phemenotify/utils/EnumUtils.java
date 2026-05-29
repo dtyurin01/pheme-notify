@@ -12,10 +12,10 @@ public final class EnumUtils {
             return null;
         }
         return Arrays.stream(enumClass.getEnumConstants())
-                .filter(e -> e.name().equalsIgnoreCase(value))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException(
-                        String.format("Unknown %s: %s", enumClass.getSimpleName(), value)
-                ));
+            .filter(e -> e.name().equalsIgnoreCase(value))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException(
+                String.format("Unknown %s: %s", enumClass.getSimpleName(), value)
+            ));
     }
 }

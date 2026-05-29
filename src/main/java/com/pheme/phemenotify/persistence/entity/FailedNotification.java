@@ -30,7 +30,7 @@ public class FailedNotification {
     private String userId;
     @Convert(disableConversion = true)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name="channel", nullable=false)
+    @Column(name = "channel", nullable = false)
     private Channel channel;
     @Column(name = "event_type", nullable = false)
     @Convert(converter = EventTypeAttributeConverter.class)

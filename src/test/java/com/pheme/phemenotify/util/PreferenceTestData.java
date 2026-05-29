@@ -11,32 +11,32 @@ public class PreferenceTestData {
 
     public static UserPreferences defaultEntity() {
         return UserPreferences.builder()
-                .userId("user-1")
-                .enabledChannels(Set.of(Channel.EMAIL))
-                .locale("en")
-                .timezone("UTC")
-                .enabled(true)
-                .build();
+            .userId("user-1")
+            .enabledChannels(Set.of(Channel.EMAIL))
+            .locale("en")
+            .timezone("UTC")
+            .enabled(true)
+            .build();
     }
 
     public static UserPreferences entityWith(String userId, Set<Channel> channels, String locale, String timezone) {
         return UserPreferences.builder()
-                .userId(userId)
-                .enabledChannels(channels)
-                .locale(locale)
-                .timezone(timezone)
-                .enabled(true)
-                .build();
+            .userId(userId)
+            .enabledChannels(channels)
+            .locale(locale)
+            .timezone(timezone)
+            .enabled(true)
+            .build();
     }
 
     public static UserPreferences entityWithNoChannels() {
         return UserPreferences.builder()
-                .userId("user-1")
-                .enabledChannels(Set.of())
-                .locale("en")
-                .timezone("UTC")
-                .enabled(true)
-                .build();
+            .userId("user-1")
+            .enabledChannels(Set.of())
+            .locale("en")
+            .timezone("UTC")
+            .enabled(true)
+            .build();
     }
 
     public static CreatePreferenceRequest defaultRequest() {

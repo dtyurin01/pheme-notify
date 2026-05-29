@@ -38,8 +38,8 @@ public class EventTypeDeserializerTest {
     @Test
     void shouldReturnEventType_whenCodeIsValid() throws IOException {
         JsonParser parser = mapper.createParser("""
-        "ORDER_CREATED"
-        """);
+            "ORDER_CREATED"
+            """);
         parser.nextToken();
 
         when(registry.findByCode("ORDER_CREATED")).thenReturn(java.util.Optional.of(eventType));
@@ -64,14 +64,14 @@ public class EventTypeDeserializerTest {
     void shouldThrowUnknown_whenCodeIsUnknown() throws IOException {
         String unknownCode = "UNKNOWN_CODE";
         JsonParser parser = mapper.createParser("""
-        "UNKNOWN_CODE"
-        """);
+            "UNKNOWN_CODE"
+            """);
         parser.nextToken();
 
         when(registry.findByCode(unknownCode)).thenReturn(java.util.Optional.empty());
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-                deserializer.deserialize(parser, null));
+            deserializer.deserialize(parser, null));
 
         assertTrue(exception.getMessage().contains(unknownCode));
     }

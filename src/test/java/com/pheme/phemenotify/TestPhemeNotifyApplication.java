@@ -6,7 +6,7 @@ public class TestPhemeNotifyApplication {
 
     public static void main(String[] args) {
         SpringApplication.from(PhemeNotifyApplication::main)
-                .with(TestcontainersConfiguration.class)
-                .run(args);
+            .with(TestcontainersConfiguration.class)
+            .run(args);
     }
 }

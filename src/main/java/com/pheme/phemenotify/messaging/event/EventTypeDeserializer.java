@@ -15,7 +15,7 @@ import java.io.IOException;
 public class EventTypeDeserializer extends JsonDeserializer<EventType> {
 
     private final EventTypeRegistry registry;
-    
+
     @Override
     public EventType deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
         String code = p.getText();
@@ -25,6 +25,6 @@ public class EventTypeDeserializer extends JsonDeserializer<EventType> {
         }
 
         return registry.findByCode(code)
-                .orElseThrow(() -> new IllegalArgumentException("Unknown event type code: " + code));
+            .orElseThrow(() -> new IllegalArgumentException("Unknown event type code: " + code));
     }
 }

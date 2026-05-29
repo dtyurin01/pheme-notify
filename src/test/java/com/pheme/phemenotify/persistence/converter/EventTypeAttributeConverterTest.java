@@ -31,7 +31,7 @@ public class EventTypeAttributeConverterTest {
     }
 
     @Test
-    void shouldReturnCode_whenEventTypeIsValid(){
+    void shouldReturnCode_whenEventTypeIsValid() {
         when(eventType.getCode()).thenReturn("ORDER_CREATED");
 
         String result = converter.convertToDatabaseColumn(eventType);
@@ -47,7 +47,7 @@ public class EventTypeAttributeConverterTest {
     }
 
     @Test
-    void shouldReturnEventType_whenCodeIsValid(){
+    void shouldReturnEventType_whenCodeIsValid() {
         String code = "ORDER_COMPLETED";
         when(registry.findByCode(code)).thenReturn(Optional.of(eventType));
 
@@ -64,12 +64,12 @@ public class EventTypeAttributeConverterTest {
     }
 
     @Test
-    void shouldThrowException_whenCodeIsUnknown(){
+    void shouldThrowException_whenCodeIsUnknown() {
         String unknownCode = "UNKNOWN";
         when(registry.findByCode(anyString())).thenReturn(Optional.empty());
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> converter.convertToEntityAttribute(unknownCode));
+            () -> converter.convertToEntityAttribute(unknownCode));
 
         assertEquals("Unknown event type: UNKNOWN", exception.getMessage());
     }

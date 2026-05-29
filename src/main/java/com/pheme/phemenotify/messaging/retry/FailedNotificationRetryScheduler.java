@@ -24,10 +24,10 @@ public class FailedNotificationRetryScheduler {
     private final NotificationOrchestrator notificationOrchestrator;
     private final RetrySchedulerProperties properties;
 
-    @Scheduled(fixedDelayString = "${notification.retry-scheduler.fixed-delay-ms}")
+    @Scheduled(fixedDelayString = "${notification.retry-scheduler.fixed-delay}")
     public void retryFailedNotifications() {
         List<FailedNotification> pending = failedNotificationRepository
-                .findByStatusAndNextRetryAtBefore(NotificationStatus.PENDING, Instant.now());
+            .findByStatusAndNextRetryAtBefore(NotificationStatus.PENDING, Instant.now());
 
         log.info("Retry scheduler: found {} pending failed notifications", pending.size());
 
@@ -54,7 +54,7 @@ public class FailedNotificationRetryScheduler {
                 failed.setStatus(NotificationStatus.FAILED);
                 log.error("Retry exhausted: id={}, marking FAILED", failed.getId());
             } else {
-                long backoffSeconds = properties.getBackoffBaseSeconds() * (1L << (newCount - 1));
+                long backoffSeconds = properties.getBackoffBase().toSeconds() * (1L << (newCount - 1));
                 failed.setNextRetryAt(Instant.now().plusSeconds(backoffSeconds));
                 log.warn("Retry #{} failed: id={}, next in {}s", newCount, failed.getId(), backoffSeconds);
             }
@@ -68,12 +68,12 @@ public class FailedNotificationRetryScheduler {
         Map<String, Object> raw = failed.getEventPayload();
 
         return new NotificationEvent(
-                (String) raw.get("id"),
-                (String) raw.get("userId"),
-                failed.getEventType(),
-                failed.getChannel(),
-                (Map<String, String>) raw.get("payload"),
-                Instant.parse((String) raw.get("occurredAt"))
+            (String) raw.get("id"),
+            (String) raw.get("userId"),
+            failed.getEventType(),
+            failed.getChannel(),
+            (Map<String, String>) raw.get("payload"),
+            Instant.parse((String) raw.get("occurredAt"))
         );
     }
 }

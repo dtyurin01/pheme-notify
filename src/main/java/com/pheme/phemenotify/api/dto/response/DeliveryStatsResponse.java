@@ -11,6 +11,6 @@ public record DeliveryStatsResponse(
         long delivered,
         long failed,
         BigDecimal deliveryRate,
-        BigDecimal rolling7dAvg
+        BigDecimal rollingWeeklyAvg
 ) {
 }

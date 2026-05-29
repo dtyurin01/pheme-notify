@@ -54,11 +54,11 @@ class NotificationOrchestratorTest {
     @BeforeEach
     void setUp() {
         lenient().when(notificationRepository.save(
-                any())).thenAnswer(
-                        inv -> inv.getArgument(0));
+            any())).thenAnswer(
+            inv -> inv.getArgument(0));
 
         lenient().when(templateService.render(any(), any(),
-                any())).thenReturn("rendered-template");
+            any())).thenReturn("rendered-template");
     }
 
     @Test
@@ -84,7 +84,7 @@ class NotificationOrchestratorTest {
     void shouldSkip_whenEnabledChannelsEmpty() {
         when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
         when(userPreferenceRepository.findByUserId("user-1"))
-                .thenReturn(Optional.of(PreferenceTestData.entityWithNoChannels()));
+            .thenReturn(Optional.of(PreferenceTestData.entityWithNoChannels()));
 
         orchestrator.process(NotificationTestData.defaultEvent());
 
@@ -95,7 +95,7 @@ class NotificationOrchestratorTest {
     void shouldDeliverNotification_whenAllSuccess() {
         when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
         when(userPreferenceRepository.findByUserId("user-1"))
-                .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
+            .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
         when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
 
         orchestrator.process(NotificationTestData.defaultEvent());
@@ -109,7 +109,7 @@ class NotificationOrchestratorTest {
     void shouldMarkAsFailed_whenProviderThrows() {
         when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
         when(userPreferenceRepository.findByUserId("user-1"))
-                .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
+            .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
         when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
         doThrow(new RuntimeException("SMTP error")).when(emailProvider).send(any(), any());
 
@@ -125,22 +125,22 @@ class NotificationOrchestratorTest {
     void shouldMarkAsFailed_whenRateLimitExceeded() {
         when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
         when(userPreferenceRepository.findByUserId("user-1"))
-                .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
+            .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
         doThrow(new RateLimitExceededException("max 5 email notifications per 1h"))
-                .when(rateLimitService).checkLimit("user-1", Channel.EMAIL);
+            .when(rateLimitService).checkLimit("user-1", Channel.EMAIL);
 
         orchestrator.process(NotificationTestData.defaultEvent());
 
         ArgumentCaptor<Notification> captor =
-                ArgumentCaptor.forClass(Notification.class);
+            ArgumentCaptor.forClass(Notification.class);
 
         verify(notificationRepository, times(2)).save(captor.capture());
 
         assertThat(captor.getAllValues().get(1)
-                .getStatus()).isEqualTo(NotificationStatus.FAILED);
+            .getStatus()).isEqualTo(NotificationStatus.FAILED);
 
         assertThat(captor.getAllValues().get(1)
-                .getErrorMessage()).contains("max 5 email notifications per 1h");
+            .getErrorMessage()).contains("max 5 email notifications per 1h");
 
         verify(providerRegistry, never()).getProvider(any());
     }
@@ -148,16 +148,16 @@ class NotificationOrchestratorTest {
     @Test
     void shouldRetryOnlySpecificChannel_whenProcessRetry() {
         UserPreferences prefs =
-                PreferenceTestData.entityWith(
-                        "user-1", Set.of(Channel.EMAIL, Channel.SMS),
-                        "en", "UTC");
+            PreferenceTestData.entityWith(
+                "user-1", Set.of(Channel.EMAIL, Channel.SMS),
+                "en", "UTC");
 
         when(userPreferenceRepository.findByUserId("user-1"))
-                .thenReturn(Optional.of(prefs));
+            .thenReturn(Optional.of(prefs));
         when(providerRegistry.getProvider(Channel.EMAIL))
-                .thenReturn(emailProvider);
+            .thenReturn(emailProvider);
         lenient().when(providerRegistry.getProvider(Channel.SMS))
-                .thenReturn(smsProvider);
+            .thenReturn(smsProvider);
 
         orchestrator.processRetry(NotificationTestData.defaultEvent());
 
@@ -170,7 +170,7 @@ class NotificationOrchestratorTest {
     void shouldContinueOtherChannels_whenOneChannelFails() {
         when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
         UserPreferences prefs = PreferenceTestData.entityWith(
-                "user-1", Set.of(Channel.EMAIL, Channel.SMS), "en", "UTC");
+            "user-1", Set.of(Channel.EMAIL, Channel.SMS), "en", "UTC");
 
         when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(prefs));
         when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);

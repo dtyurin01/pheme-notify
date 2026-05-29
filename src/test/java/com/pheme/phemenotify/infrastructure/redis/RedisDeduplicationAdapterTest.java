@@ -9,34 +9,34 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class RedisDeduplicationAdapterTest extends BaseIntegrationTest {
-   @Autowired
-   private RedisDeduplicationAdapter redisDeduplicationAdapter;
+    @Autowired
+    private RedisDeduplicationAdapter redisDeduplicationAdapter;
 
-   @Autowired
-   private StringRedisTemplate stringRedisTemplate;
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
 
-   @AfterEach
-   void cleanUp() {
-      stringRedisTemplate.getConnectionFactory()
-              .getConnection()
-              .serverCommands()
-              .flushDb();
-   }
+    @AfterEach
+    void cleanUp() {
+        stringRedisTemplate.getConnectionFactory()
+            .getConnection()
+            .serverCommands()
+            .flushDb();
+    }
 
 
-   @Test
-   void shouldReturnTrue_whenEventIsNew() {
-       boolean result = redisDeduplicationAdapter.isNew("event1");
+    @Test
+    void shouldReturnTrue_whenEventIsNew() {
+        boolean result = redisDeduplicationAdapter.isNew("event1");
 
-       assertThat(result).isTrue();
-   }
+        assertThat(result).isTrue();
+    }
 
-   @Test
-   void shouldReturnFalse_whenEventIsDuplicate() {
-      redisDeduplicationAdapter.isNew("event1");
+    @Test
+    void shouldReturnFalse_whenEventIsDuplicate() {
+        redisDeduplicationAdapter.isNew("event1");
 
-      boolean result = redisDeduplicationAdapter.isNew("event1");
+        boolean result = redisDeduplicationAdapter.isNew("event1");
 
-      assertThat(result).isFalse();
-   }
+        assertThat(result).isFalse();
+    }
 }

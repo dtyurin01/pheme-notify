@@ -46,11 +46,11 @@ public class NotificationEventConsumerTest {
     void shouldPropagateException_whenOrchestratorThrows() {
         NotificationEvent notificationEvent = NotificationTestData.defaultEvent();
         doThrow(new RuntimeException("processing failed"))
-                .when(notificationOrchestrator).process(notificationEvent);
+            .when(notificationOrchestrator).process(notificationEvent);
 
         assertThatThrownBy(() -> notificationEventConsumer.handleEvent(notificationEvent))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessage("processing failed");
+            .isInstanceOf(RuntimeException.class)
+            .hasMessage("processing failed");
     }
 
 
@@ -61,9 +61,9 @@ public class NotificationEventConsumerTest {
         NotificationEvent notificationEvent = NotificationTestData.defaultEvent();
 
         notificationEventConsumer.handleDlt(
-                notificationEvent,
-                "notification.events.dlt",
-                "timeout after 3 retries");
+            notificationEvent,
+            "notification.events.dlt",
+            "timeout after 3 retries");
 
         ArgumentCaptor<FailedNotification> captor = ArgumentCaptor.forClass(FailedNotification.class);
 
@@ -83,9 +83,9 @@ public class NotificationEventConsumerTest {
         NotificationEvent notificationEvent = NotificationTestData.defaultEvent();
 
         notificationEventConsumer.handleDlt(
-                notificationEvent,
-                "notification.events.dlt",
-        "SMTP Error");
+            notificationEvent,
+            "notification.events.dlt",
+            "SMTP Error");
 
         ArgumentCaptor<FailedNotification> captor = ArgumentCaptor.forClass(FailedNotification.class);
 

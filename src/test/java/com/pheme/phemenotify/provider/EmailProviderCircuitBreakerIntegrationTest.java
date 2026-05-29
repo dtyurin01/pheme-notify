@@ -46,14 +46,14 @@ public class EmailProviderCircuitBreakerIntegrationTest extends BaseIntegrationT
         circuitBreakerRegistry.find("email").ifPresent(CircuitBreaker::reset);
         event = NotificationTestData.eventWithPayload(Map.of("email", "user@example.com"));
         when(mailSender.createMimeMessage())
-                .thenReturn(new MimeMessage(Session.getDefaultInstance(new Properties())));
+            .thenReturn(new MimeMessage(Session.getDefaultInstance(new Properties())));
     }
 
     //  ─────────── helpers ───────────
 
     private void makeFailingCalls(int count) {
         doThrow(new RuntimeException("SMTP down"))
-                .when(mailSender).send(any(MimeMessage.class));
+            .when(mailSender).send(any(MimeMessage.class));
 
         for (int i = 0; i < count; i++) {
             try {
@@ -106,8 +106,8 @@ public class EmailProviderCircuitBreakerIntegrationTest extends BaseIntegrationT
         clearInvocations(mailSender);
 
         assertThatThrownBy(() -> emailProvider.send(event, "<h1>Hello!</h1>"))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Email service unavailable");
+            .isInstanceOf(RuntimeException.class)
+            .hasMessageContaining("Email service unavailable");
 
         verify(mailSender, never()).send(any(MimeMessage.class));
     }
@@ -127,8 +127,8 @@ public class EmailProviderCircuitBreakerIntegrationTest extends BaseIntegrationT
         clearInvocations(mailSender);
 
         assertThatThrownBy(() -> emailProvider.send(event, "<h1>Hi</h1>"))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Email service unavailable");
+            .isInstanceOf(RuntimeException.class)
+            .hasMessageContaining("Email service unavailable");
 
         verify(mailSender, never()).send(any(MimeMessage.class));
 
@@ -185,7 +185,7 @@ public class EmailProviderCircuitBreakerIntegrationTest extends BaseIntegrationT
         transitionToHalfOpen();
 
         doThrow(new RuntimeException("SMTP down"))
-                .when(mailSender).send(any(MimeMessage.class));
+            .when(mailSender).send(any(MimeMessage.class));
 
         for (int i = 0; i < PERMITTED_CALLS_IN_HALF_OPEN; i++) {
             try {
@@ -197,8 +197,8 @@ public class EmailProviderCircuitBreakerIntegrationTest extends BaseIntegrationT
         clearInvocations(mailSender);
 
         assertThatThrownBy(() -> emailProvider.send(event, "<h1>Hello!</h1>"))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Email service unavailable");
+            .isInstanceOf(RuntimeException.class)
+            .hasMessageContaining("Email service unavailable");
 
         verify(mailSender, never()).send(any(MimeMessage.class));
     }

@@ -1,8 +1,6 @@
 package com.pheme.phemenotify.persistence.entity;
 
 import jakarta.persistence.*;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -31,16 +29,16 @@ public class UserPreferences {
     @Column(name = "user_id", nullable = false, unique = true)
     private String userId;
 
-    @ElementCollection(targetClass = Channel.class ,fetch = FetchType.EAGER)
+    @ElementCollection(targetClass = Channel.class, fetch = FetchType.EAGER)
     @CollectionTable(
-            name = "user_preference_channels",
-            joinColumns = @JoinColumn(name = "preference_id")
+        name = "user_preference_channels",
+        joinColumns = @JoinColumn(name = "preference_id")
     )
     @Convert(disableConversion = true)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "channel")
     @Builder.Default
-    private Set<Channel>  enabledChannels = new HashSet<>();
+    private Set<Channel> enabledChannels = new HashSet<>();
 
     @Builder.Default
     @Column(name = "locale", nullable = false)

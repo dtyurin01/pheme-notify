@@ -15,53 +15,53 @@ public class NotificationTestData {
 
     public static Notification defaultEntity(UUID id) {
         return Notification.builder()
-                .id(id)
-                .userId("user-1")
-                .channel(Channel.EMAIL)
-                .eventType(new OrderCompletedEventType())
-                .status(NotificationStatus.DELIVERED)
-                .errorMessage(null)
-                .createdAt(Instant.now())
-                .sentAt(Instant.now())
-                .build();
+            .id(id)
+            .userId("user-1")
+            .channel(Channel.EMAIL)
+            .eventType(new OrderCompletedEventType())
+            .status(NotificationStatus.DELIVERED)
+            .errorMessage(null)
+            .createdAt(Instant.now())
+            .sentAt(Instant.now())
+            .build();
     }
 
     public static Notification entityWith(UUID id, NotificationStatus status, String errorMessage) {
         return Notification.builder()
-                .id(id)
-                .userId("user-1")
-                .channel(Channel.EMAIL)
-                .eventType(new OrderCompletedEventType())
-                .status(status)
-                .errorMessage(errorMessage)
-                .createdAt(Instant.now())
-                .sentAt(Instant.now())
-                .build();
+            .id(id)
+            .userId("user-1")
+            .channel(Channel.EMAIL)
+            .eventType(new OrderCompletedEventType())
+            .status(status)
+            .errorMessage(errorMessage)
+            .createdAt(Instant.now())
+            .sentAt(Instant.now())
+            .build();
     }
 
     public static NotificationResponse defaultResponse(UUID id) {
         return new NotificationResponse(
-                id,
-                "user-1",
-                Channel.EMAIL,
-                OrderCompletedEventType.CODE,
-                NotificationStatus.DELIVERED,
-                null,
-                Instant.now(),
-                Instant.now()
+            id,
+            "user-1",
+            Channel.EMAIL,
+            OrderCompletedEventType.CODE,
+            NotificationStatus.DELIVERED,
+            null,
+            Instant.now(),
+            Instant.now()
         );
     }
 
     public static NotificationResponse responseWith(UUID id, NotificationStatus status, String errorMessage) {
         return new NotificationResponse(
-                id,
-                "user-1",
-                Channel.EMAIL,
-                OrderCompletedEventType.CODE,
-                status,
-                errorMessage,
-                Instant.now(),
-                Instant.now()
+            id,
+            "user-1",
+            Channel.EMAIL,
+            OrderCompletedEventType.CODE,
+            status,
+            errorMessage,
+            Instant.now(),
+            Instant.now()
         );
     }
 
@@ -70,22 +70,23 @@ public class NotificationTestData {
 
     public static NotificationEvent defaultEvent() {
         return new NotificationEvent(
-                "event-1",
-                "user-1",
-                new OrderCompletedEventType(),
-                Channel.EMAIL,
-                Map.of("email", "user@example.com"),
-                Instant.now()
+            "event-1",
+            "user-1",
+            new OrderCompletedEventType(),
+            Channel.EMAIL,
+            Map.of("email", "user@example.com"),
+            Instant.now()
         );
     }
+
     public static NotificationEvent eventWithPayload(Map<String, String> payload) {
         return new NotificationEvent(
-                "event-1",
-                "user-1",
-                new OrderCompletedEventType(),
-                Channel.EMAIL,
-                payload,
-                Instant.now()
+            "event-1",
+            "user-1",
+            new OrderCompletedEventType(),
+            Channel.EMAIL,
+            payload,
+            Instant.now()
         );
     }
 

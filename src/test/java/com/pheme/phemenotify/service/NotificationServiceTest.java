@@ -49,7 +49,7 @@ class NotificationServiceTest {
         when(notificationRepository.findById(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> notificationService.getById(id))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining(id.toString());
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessageContaining(id.toString());
     }
 }

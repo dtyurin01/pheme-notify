@@ -1,6 +1,7 @@
 package com.pheme.phemenotify.service;
 
 
+import com.pheme.phemenotify.api.exception.TemplateNotFoundException;
 import com.pheme.phemenotify.persistence.entity.Channel;
 import com.pheme.phemenotify.persistence.entity.EventType;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.exceptions.TemplateInputException;
 import org.thymeleaf.spring6.SpringTemplateEngine;
-import com.pheme.phemenotify.api.exception.TemplateNotFoundException;
 
 import java.util.Map;
 

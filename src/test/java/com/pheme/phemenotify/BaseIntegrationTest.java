@@ -21,17 +21,17 @@ public abstract class BaseIntegrationTest {
 
     @SuppressWarnings("deprecation")
     static final PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>("postgres:17")
-                    .withDatabaseName("pheme_test")
-                    .withUsername("pheme")
-                    .withPassword("pheme");
+        new PostgreSQLContainer<>("postgres:17")
+            .withDatabaseName("pheme_test")
+            .withUsername("pheme")
+            .withPassword("pheme");
 
     static final RedisContainer redis =
-            new RedisContainer(DockerImageName.parse("redis:7-alpine"));
+        new RedisContainer(DockerImageName.parse("redis:7-alpine"));
 
     @SuppressWarnings("deprecation")
     static final KafkaContainer kafka =
-            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.9.0"));
+        new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.9.0"));
 
     static {
         Startables.deepStart(postgres, redis, kafka).join();

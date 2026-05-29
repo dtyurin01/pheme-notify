@@ -4,5 +4,5 @@ public enum NotificationStatus {
     PENDING,
     DELIVERED,
     FAILED,
-    CANCELLED 
+    CANCELLED
 }

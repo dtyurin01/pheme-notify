@@ -1,7 +1,7 @@
 package com.pheme.phemenotify.persistence.entity;
 
-import jakarta.persistence.*;
 import com.pheme.phemenotify.persistence.converter.EventTypeAttributeConverter;
+import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -25,7 +25,7 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name="user_id", nullable=false)
+    @Column(name = "user_id", nullable = false)
     private String userId;
 
     @Column(name = "event_type", nullable = false)
@@ -61,11 +61,11 @@ public class Notification {
 
     public static Notification pending(String userId, EventType eventType, Channel channel, String idempotencyKey) {
         return Notification.builder()
-                .userId(userId)
-                .eventType(eventType)
-                .channel(channel)
-                .idempotencyKey(idempotencyKey)
-                .status(NotificationStatus.PENDING)
-                .build();
+            .userId(userId)
+            .eventType(eventType)
+            .channel(channel)
+            .idempotencyKey(idempotencyKey)
+            .status(NotificationStatus.PENDING)
+            .build();
     }
 }

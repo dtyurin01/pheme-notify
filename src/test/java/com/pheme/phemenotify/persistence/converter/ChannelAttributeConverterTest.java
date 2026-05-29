@@ -42,7 +42,7 @@ class ChannelAttributeConverterTest {
     @Test
     void shouldThrowException_whenCodeIsUnknown() {
         assertThrows(IllegalArgumentException.class,
-                () -> converter.convertToEntityAttribute(pgObject("notification_channel", "unknown_channel_code")));
+            () -> converter.convertToEntityAttribute(pgObject("notification_channel", "unknown_channel_code")));
     }
 
     private PGobject pgObject(String type, String value) {

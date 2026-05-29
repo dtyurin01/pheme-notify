@@ -17,15 +17,15 @@ public class ResilienceConfig {
     @Bean
     public Customizer<Resilience4JCircuitBreakerFactory> emailCircuitBreakerConfig() {
         CircuitBreakerConfig config = CircuitBreakerConfig.custom()
-                .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
-                .slidingWindowSize(props.getSlidingWindowSize())
-                .failureRateThreshold(props.getFailureRateThreshold())
-                .waitDurationInOpenState(props.getWaitDurationInOpenState())
-                .permittedNumberOfCallsInHalfOpenState(props.getPermittedCallsInHalfOpen())
-                .build();
+            .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
+            .slidingWindowSize(props.getSlidingWindowSize())
+            .failureRateThreshold(props.getFailureRateThreshold())
+            .waitDurationInOpenState(props.getWaitDurationInOpenState())
+            .permittedNumberOfCallsInHalfOpenState(props.getPermittedCallsInHalfOpen())
+            .build();
 
         return factory -> factory.configure(
-                builder -> builder.circuitBreakerConfig(config), "email"
+            builder -> builder.circuitBreakerConfig(config), "email"
         );
     }
 }
