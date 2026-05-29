@@ -6,8 +6,6 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.pheme.phemenotify.utils.EnumUtils;
 import lombok.RequiredArgsConstructor;
 
-import java.util.Arrays;
-
 @RequiredArgsConstructor
 public enum Channel {
     EMAIL("EMAIL"),

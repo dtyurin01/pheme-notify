@@ -17,15 +17,15 @@ public class RateLimitService {
         RateLimitProperties.ChannelLimit limit = getLimit(channel);
 
         boolean allowed = rateLimitAdapter.isAllowed(
-                userId,
-                channel.name(),
-                limit.window().toMillis(),
-                limit.maxRequests()
+            userId,
+            channel.name(),
+            limit.window().toMillis(),
+            limit.maxRequests()
         );
 
         if (!allowed) {
             throw new RateLimitExceededException(
-                    "Rate limit exceeded for user " + userId +
+                "Rate limit exceeded for user " + userId +
                     ": max " + limit.maxRequests() +
                     " " + channel.name().toLowerCase() +
                     " notifications per " + limit.window()

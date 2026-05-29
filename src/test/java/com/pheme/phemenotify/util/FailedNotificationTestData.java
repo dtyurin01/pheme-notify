@@ -17,18 +17,18 @@ public class FailedNotificationTestData {
 
     public static FailedNotification pending(int retryCount) {
         return FailedNotification.builder()
-                .id(UUID.randomUUID())
-                .userId("user-1")
-                .channel(Channel.EMAIL)
-                .eventType(new OrderCompletedEventType())
-                .retryCount(retryCount)
-                .status(NotificationStatus.PENDING)
-                .eventPayload(Map.of(
-                        "id", "event-1",
-                        "userId", "user-1",
-                        "occurredAt", Instant.now().toString(),
-                        "payload", Map.of("email", "user@example.com")
-                ))
-                .build();
+            .id(UUID.randomUUID())
+            .userId("user-1")
+            .channel(Channel.EMAIL)
+            .eventType(new OrderCompletedEventType())
+            .retryCount(retryCount)
+            .status(NotificationStatus.PENDING)
+            .eventPayload(Map.of(
+                "id", "event-1",
+                "userId", "user-1",
+                "occurredAt", Instant.now().toString(),
+                "payload", Map.of("email", "user@example.com")
+            ))
+            .build();
     }
 }

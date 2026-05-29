@@ -22,6 +22,8 @@ import static java.lang.annotation.ElementType.PARAMETER;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface PositiveDuration {
     String message() default "must be a positive duration";
+
     Class<?>[] groups() default {};
+
     Class<? extends Payload>[] payload() default {};
 }

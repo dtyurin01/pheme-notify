@@ -7,11 +7,11 @@ import java.time.Instant;
 import java.util.Map;
 
 public record NotificationEvent(
-        String id,
-        String userId,
-        EventType eventType,
-        Channel channel,
-        Map<String, String> payload,
-        Instant occurredAt
+    String id,
+    String userId,
+    EventType eventType,
+    Channel channel,
+    Map<String, String> payload,
+    Instant occurredAt
 ) {
 }

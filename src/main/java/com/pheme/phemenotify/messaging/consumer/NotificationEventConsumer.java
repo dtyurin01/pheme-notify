@@ -29,14 +29,14 @@ public class NotificationEventConsumer {
 
 
     @RetryableTopic(
-            attempts = "3",
-            backOff = @BackOff(delay = 5000, multiplier = 2),
-            dltTopicSuffix = ".dlt",
-            topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE
+        attempts = "3",
+        backOff = @BackOff(delay = 5000, multiplier = 2),
+        dltTopicSuffix = ".dlt",
+        topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE
     )
     @KafkaListener(topics = "notification.events", groupId = "notification-hub")
     public void handleEvent(NotificationEvent
-                                    event) {
+                                event) {
         log.info("Received event: id:{}, userId:{}", event.id(), event.userId());
 
         orchestrator.process(event);
@@ -49,12 +49,12 @@ public class NotificationEventConsumer {
         log.error("Event failed after all retries: id:{}, topic={}", event.id(), topic);
 
         FailedNotification failed = FailedNotification.builder()
-                .userId(event.userId())
-                .channel(event.channel())
-                .eventType(event.eventType())
-                .eventPayload(buildEventPayload(event))
-                .errorMessage(errorMessage)
-                .build();
+            .userId(event.userId())
+            .channel(event.channel())
+            .eventType(event.eventType())
+            .eventPayload(buildEventPayload(event))
+            .errorMessage(errorMessage)
+            .build();
 
         failedNotificationRepository.save(failed);
     }

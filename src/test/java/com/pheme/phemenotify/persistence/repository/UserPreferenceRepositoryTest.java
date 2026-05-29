@@ -22,7 +22,7 @@ public class UserPreferenceRepositoryTest extends BaseIntegrationTest {
     }
 
     @Test
-    void shouldFindByUserId_whenSaved(){
+    void shouldFindByUserId_whenSaved() {
         userPreferenceRepository.save(PreferenceTestData.defaultEntity());
 
         Optional<UserPreferences> found = userPreferenceRepository.findByUserId("user-1");
@@ -32,7 +32,7 @@ public class UserPreferenceRepositoryTest extends BaseIntegrationTest {
     }
 
     @Test
-    void shouldReturnEmpty_whenUserIdNotFound(){
+    void shouldReturnEmpty_whenUserIdNotFound() {
         Optional<UserPreferences> found = userPreferenceRepository.findByUserId("non-existent-user");
 
         assertThat(found).isEmpty();

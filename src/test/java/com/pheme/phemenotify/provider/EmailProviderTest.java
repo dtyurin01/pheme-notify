@@ -37,9 +37,9 @@ public class EmailProviderTest {
     @Test
     void shouldSendEmail_whenValidPayload() {
         NotificationEvent event = NotificationTestData
-                .eventWithPayload(Map.of("email", "user@example.com"));
+            .eventWithPayload(Map.of("email", "user@example.com"));
         when(mailSender.createMimeMessage())
-                .thenReturn(new MimeMessage(Session.getDefaultInstance(new Properties())));
+            .thenReturn(new MimeMessage(Session.getDefaultInstance(new Properties())));
 
         emailProvider.send(event, "<h1>Hello!</h1>");
 
@@ -49,17 +49,16 @@ public class EmailProviderTest {
     @Test
     void shouldPropagateException_whenCircuitBreakerFallbackTriggered() {
         NotificationEvent event = NotificationTestData
-                .eventWithPayload(Map.of("email", "user@example.com"));
+            .eventWithPayload(Map.of("email", "user@example.com"));
         when(mailSender.createMimeMessage())
-                .thenReturn(new MimeMessage(Session.getDefaultInstance(new Properties())));
+            .thenReturn(new MimeMessage(Session.getDefaultInstance(new Properties())));
         doThrow(new RuntimeException("SMTP down"))
-                .when(mailSender).send(any(MimeMessage.class));
+            .when(mailSender).send(any(MimeMessage.class));
 
         assertThatThrownBy(() -> emailProvider.send(event, "<h1>Hello!</h1>"))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Email service unavailable");
+            .isInstanceOf(RuntimeException.class)
+            .hasMessageContaining("Email service unavailable");
     }
-
 
 
     @Test
@@ -67,8 +66,8 @@ public class EmailProviderTest {
         NotificationEvent event = NotificationTestData.eventWithPayload(Map.of());
 
         assertThatThrownBy(() -> emailProvider.send(event, "template"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("user-1");
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("user-1");
     }
 
 }

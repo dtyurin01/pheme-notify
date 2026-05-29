@@ -21,23 +21,23 @@ public class KafkaConfig {
     @Bean
     public NewTopic notificationEventsTopic() {
         return TopicBuilder.name("notification.events")
-                .partitions(MAIN_TOPIC_PARTITIONS)
-                .replicas(TOPIC_REPLICAS)
-                .build();
+            .partitions(MAIN_TOPIC_PARTITIONS)
+            .replicas(TOPIC_REPLICAS)
+            .build();
     }
 
     @Bean
     public NewTopic notificationEventsDltTopic() {
         return TopicBuilder.name("notification.events.dlt")
-                .partitions(DLT_TOPIC_PARTITIONS)
-                .replicas(TOPIC_REPLICAS)
-                .build();
+            .partitions(DLT_TOPIC_PARTITIONS)
+            .replicas(TOPIC_REPLICAS)
+            .build();
     }
 
     @Bean
     public DefaultErrorHandler errorHandler() {
         var handler = new DefaultErrorHandler(
-                new FixedBackOff(ERROR_HANDLER_BACKOFF_MS, ERROR_HANDLER_MAX_ATTEMPTS));
+            new FixedBackOff(ERROR_HANDLER_BACKOFF_MS, ERROR_HANDLER_MAX_ATTEMPTS));
 
         handler.addNotRetryableExceptions(SerializationException.class, ConversionException.class);
         return handler;

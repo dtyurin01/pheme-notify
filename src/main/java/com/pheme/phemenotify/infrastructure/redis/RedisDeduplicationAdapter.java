@@ -16,7 +16,7 @@ public class RedisDeduplicationAdapter {
 
     private final StringRedisTemplate stringRedisTemplate;
 
-    public boolean isNew(String eventId){
+    public boolean isNew(String eventId) {
         Boolean result = stringRedisTemplate.opsForValue().setIfAbsent(KEY_PREFIX + eventId, "1", TTL);
 
         return Boolean.TRUE.equals(result);

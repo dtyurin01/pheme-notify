@@ -27,7 +27,7 @@ public class FailedNotificationRetryScheduler {
     @Scheduled(fixedDelayString = "${notification.retry-scheduler.fixed-delay}")
     public void retryFailedNotifications() {
         List<FailedNotification> pending = failedNotificationRepository
-                .findByStatusAndNextRetryAtBefore(NotificationStatus.PENDING, Instant.now());
+            .findByStatusAndNextRetryAtBefore(NotificationStatus.PENDING, Instant.now());
 
         log.info("Retry scheduler: found {} pending failed notifications", pending.size());
 
@@ -68,12 +68,12 @@ public class FailedNotificationRetryScheduler {
         Map<String, Object> raw = failed.getEventPayload();
 
         return new NotificationEvent(
-                (String) raw.get("id"),
-                (String) raw.get("userId"),
-                failed.getEventType(),
-                failed.getChannel(),
-                (Map<String, String>) raw.get("payload"),
-                Instant.parse((String) raw.get("occurredAt"))
+            (String) raw.get("id"),
+            (String) raw.get("userId"),
+            failed.getEventType(),
+            failed.getChannel(),
+            (Map<String, String>) raw.get("payload"),
+            Instant.parse((String) raw.get("occurredAt"))
         );
     }
 }

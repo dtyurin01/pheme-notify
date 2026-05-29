@@ -21,11 +21,11 @@ public class TemplateServiceIntegrationTest {
     private TemplateService templateService;
 
     @Test
-    void shouldRenderEmailTemplate_withVariables(){
+    void shouldRenderEmailTemplate_withVariables() {
         String result = templateService.render(
-                new OrderCompletedEventType(),
-                Channel.EMAIL,
-                Map.of("orderId", "123", "amount", "10")
+            new OrderCompletedEventType(),
+            Channel.EMAIL,
+            Map.of("orderId", "123", "amount", "10")
         );
         log.info("=== RENDERED EMAIL ===\n{}", result);
         assertThat(result).contains("123");
@@ -33,11 +33,11 @@ public class TemplateServiceIntegrationTest {
     }
 
     @Test
-    void shouldRenderSmsTemplate_withVariables(){
+    void shouldRenderSmsTemplate_withVariables() {
         String result = templateService.render(
-                new UserRegisteredEventType(),
-                Channel.SMS,
-                Map.of("email", "user@example.com")
+            new UserRegisteredEventType(),
+            Channel.SMS,
+            Map.of("email", "user@example.com")
         );
         log.info("=== RENDERED SMS ===\n{}", result);
         assertThat(result).contains("user@example.com");

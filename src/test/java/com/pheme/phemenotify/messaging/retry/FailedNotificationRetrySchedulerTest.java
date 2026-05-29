@@ -40,7 +40,7 @@ class FailedNotificationRetrySchedulerTest {
     @Test
     void shouldDoNothing_whenNoPendingNotifications() {
         when(failedNotificationRepository.findByStatusAndNextRetryAtBefore(any(), any()))
-                .thenReturn(List.of());
+            .thenReturn(List.of());
 
         scheduler.retryFailedNotifications();
 
@@ -52,7 +52,7 @@ class FailedNotificationRetrySchedulerTest {
     void shouldMarkAsDelivered_whenRetrySucceeds() {
         FailedNotification failed = FailedNotificationTestData.pending();
         when(failedNotificationRepository.findByStatusAndNextRetryAtBefore(any(), any()))
-                .thenReturn(List.of(failed));
+            .thenReturn(List.of(failed));
         when(notificationOrchestrator.processRetry(any())).thenReturn(true);
 
         scheduler.retryFailedNotifications();
@@ -69,7 +69,7 @@ class FailedNotificationRetrySchedulerTest {
     void shouldIncrementRetryCountAndScheduleNextRetry_whenRetryFails() {
         FailedNotification failed = FailedNotificationTestData.pending(0);
         when(failedNotificationRepository.findByStatusAndNextRetryAtBefore(any(), any()))
-                .thenReturn(List.of(failed));
+            .thenReturn(List.of(failed));
         when(properties.getMaxAttempts()).thenReturn(3);
         when(properties.getBackoffBase()).thenReturn(Duration.ofSeconds(300));
         when(notificationOrchestrator.processRetry(any())).thenReturn(false);
@@ -89,7 +89,7 @@ class FailedNotificationRetrySchedulerTest {
     void shouldMarkAsFailed_whenMaxRetriesExhausted() {
         FailedNotification failed = FailedNotificationTestData.pending(2); // MAX_RETRY_ATTEMPTS - 1
         when(failedNotificationRepository.findByStatusAndNextRetryAtBefore(any(), any()))
-                .thenReturn(List.of(failed));
+            .thenReturn(List.of(failed));
         when(properties.getMaxAttempts()).thenReturn(3);
         when(notificationOrchestrator.processRetry(any())).thenReturn(false);
 

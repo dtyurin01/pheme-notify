@@ -10,7 +10,7 @@ public class NotificationStatusConverterTest {
     private final NotificationStatusConverter converter = new NotificationStatusConverter();
 
     @Test
-    void shouldReturnName_whenStatusIsDelivered(){
+    void shouldReturnName_whenStatusIsDelivered() {
         PGobject result = converter.convertToDatabaseColumn(NotificationStatus.DELIVERED);
 
         assertNotNull(result);
@@ -42,7 +42,7 @@ public class NotificationStatusConverterTest {
     @Test
     void shouldThrowException_whenCodeIsUnknown() {
         assertThrows(IllegalArgumentException.class,
-                () -> converter.convertToEntityAttribute(pgObject("notification_status", "not_a_valid_status")));
+            () -> converter.convertToEntityAttribute(pgObject("notification_status", "not_a_valid_status")));
     }
 
     private PGobject pgObject(String type, String value) {

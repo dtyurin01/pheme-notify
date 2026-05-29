@@ -19,7 +19,7 @@ class EventTypeRegistryTest {
     EventType mockEventType;
 
     @Test
-    void shouldReturnEventType_whenCodeIsValid(){
+    void shouldReturnEventType_whenCodeIsValid() {
         when(mockEventType.getCode()).thenReturn("ORDER_COMPLETED");
         EventTypeRegistry registry = new EventTypeRegistry(List.of(mockEventType));
 
@@ -27,17 +27,17 @@ class EventTypeRegistryTest {
     }
 
     @Test
-    void shouldThrowException_whenCodeIsUnknown(){
+    void shouldThrowException_whenCodeIsUnknown() {
         when(mockEventType.getCode()).thenReturn("ORDER_COMPLETED");
         EventTypeRegistry registry = new EventTypeRegistry(List.of(mockEventType));
 
         assertThatThrownBy(() -> registry.getByCode("UNKNOWN_CODE"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unknown EventType code: UNKNOWN_CODE");
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Unknown EventType code: UNKNOWN_CODE");
     }
 
     @Test
-    void shouldThrowException_whenDuplicateCodeOnStartup(){
+    void shouldThrowException_whenDuplicateCodeOnStartup() {
         EventType duplicate = mock(EventType.class);
 
         String duplicateCode = "DUPLICATE_CODE";
@@ -47,7 +47,7 @@ class EventTypeRegistryTest {
         List<EventType> typesWithDuplicates = List.of(mockEventType, duplicate);
 
         assertThatThrownBy(() -> new EventTypeRegistry(typesWithDuplicates))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Duplicate EventType code detected");
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Duplicate EventType code detected");
     }
 }
