@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class JacksonConfig {
+
     @Bean
     public Module eventTypeModule(EventTypeDeserializer deserializer) {
         SimpleModule module = new SimpleModule();

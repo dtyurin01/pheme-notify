@@ -26,12 +26,15 @@ class NotificationControllerTest {
     @MockitoBean
     private NotificationService notificationService;
 
+
+    private static final String URL = ApiPaths.V1 + "/notifications/{id}/status";
+
     @Test
     void shouldReturn200WithNotificationResponse_whenNotificationExists() throws Exception {
         UUID id = UUID.randomUUID();
         when(notificationService.getById(id)).thenReturn(NotificationTestData.defaultResponse(id));
 
-        mockMvc.perform(get(ApiPaths.V1 + "/notifications/{id}/status", id))
+        mockMvc.perform(get(URL, id))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(id.toString()))
             .andExpect(jsonPath("$.status").value("DELIVERED"))
@@ -44,7 +47,7 @@ class NotificationControllerTest {
         when(notificationService.getById(id))
             .thenThrow(new ResourceNotFoundException("Notification not found: " + id));
 
-        mockMvc.perform(get(ApiPaths.V1 + "/notifications/{id}/status", id))
+        mockMvc.perform(get(URL, id))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.title").value("Resource Not Found"));
     }
@@ -55,7 +58,7 @@ class NotificationControllerTest {
         when(notificationService.getById(id))
             .thenThrow(new RuntimeException("secret db password 1234"));
 
-        mockMvc.perform(get(ApiPaths.V1 + "/notifications/{id}/status", id))
+        mockMvc.perform(get(URL, id))
             .andExpect(status().isInternalServerError())
             .andExpect(jsonPath("$.title").value("Internal Server Error"))
             .andExpect(jsonPath("$.detail").value("An unexpected error occurred"));
