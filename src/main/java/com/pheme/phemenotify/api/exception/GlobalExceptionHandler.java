@@ -45,6 +45,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.badRequest().body(problem);
     }
 
+    @ExceptionHandler(InvalidDateRangeException.class)
+    public ProblemDetail handleInvalidDateRange(InvalidDateRangeException exception) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
+        problem.setType(URI.create("https://pheme.com/errors/invalid-date-range"));
+        problem.setTitle("Invalid Date Range");
+        return problem;
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail exception(Exception exception) {
         String errorId = UUID.randomUUID().toString();

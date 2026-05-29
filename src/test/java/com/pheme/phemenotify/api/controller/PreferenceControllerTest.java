@@ -19,6 +19,8 @@ import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -40,12 +42,14 @@ public class PreferenceControllerTest {
     private EventTypeDeserializer eventTypeDeserializer;
 
 
+    private static final String ENDPOINT = ApiPaths.V1 + "/users/{userId}/preferences";
+
     @Test
     void shouldReturn200WithPreferenceResponse_whenUserExists() throws Exception {
         PreferenceResponse response = PreferenceTestData.defaultResponse();
         when(preferenceService.getByUserId("user-1")).thenReturn(response);
 
-        mockMvc.perform(get(ApiPaths.V1 + "/users/user-1/preferences"))
+        mockMvc.perform(get(ENDPOINT, "user-1"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.userId").value("user-1"))
             .andExpect(jsonPath("$.enabled").value(true));
@@ -55,7 +59,7 @@ public class PreferenceControllerTest {
     void shouldReturn404_whenUserNotFound() throws Exception {
         when(preferenceService.getByUserId("unknown")).thenThrow(new ResourceNotFoundException("User not found"));
 
-        mockMvc.perform(get(ApiPaths.V1 + "/users/unknown/preferences"))
+        mockMvc.perform(get(ENDPOINT, "unknown"))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.title").value("Resource Not Found"));
     }
@@ -65,10 +69,9 @@ public class PreferenceControllerTest {
         CreatePreferenceRequest request = PreferenceTestData.defaultRequest();
         PreferenceResponse response = PreferenceTestData.defaultResponse();
 
-        when(preferenceService.upsert(eq("user-1"), any()))
-            .thenReturn(response);
+        when(preferenceService.upsert(eq("user-1"), any())).thenReturn(response);
 
-        mockMvc.perform(put(ApiPaths.V1 + "/users/user-1/preferences")
+        mockMvc.perform(put(ENDPOINT, "user-1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
@@ -80,10 +83,12 @@ public class PreferenceControllerTest {
     void shouldReturn400_whenEnabledChannelIsEmpty() throws Exception {
         CreatePreferenceRequest request = new CreatePreferenceRequest(Set.of(), "en", "UTC");
 
-        mockMvc.perform(put(ApiPaths.V1 + "/users/user-1/preferences")
+        mockMvc.perform(put(ENDPOINT, "user-1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.title").value("Validation Failed"));
+
+        verify(preferenceService, never()).upsert(any(), any());
     }
 }
