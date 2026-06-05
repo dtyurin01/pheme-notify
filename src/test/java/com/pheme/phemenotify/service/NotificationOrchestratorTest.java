@@ -3,9 +3,11 @@ package com.pheme.phemenotify.service;
 import com.pheme.phemenotify.api.exception.RateLimitExceededException;
 import com.pheme.phemenotify.infrastructure.redis.RedisDeduplicationAdapter;
 import com.pheme.phemenotify.persistence.entity.Channel;
+import com.pheme.phemenotify.persistence.entity.EventTypeRegistry;
 import com.pheme.phemenotify.persistence.entity.Notification;
 import com.pheme.phemenotify.persistence.entity.NotificationStatus;
 import com.pheme.phemenotify.persistence.entity.UserPreferences;
+import com.pheme.phemenotify.persistence.entity.eventtype.OrderCompletedEventType;
 import com.pheme.phemenotify.persistence.repository.NotificationRepository;
 import com.pheme.phemenotify.persistence.repository.UserPreferenceRepository;
 import com.pheme.phemenotify.provider.NotificationProvider;
@@ -48,6 +50,9 @@ class NotificationOrchestratorTest {
     @Mock
     private TemplateService templateService;
 
+    @Mock
+    private EventTypeRegistry eventTypeRegistry;
+
     @InjectMocks
     private NotificationOrchestrator orchestrator;
 
@@ -59,6 +64,9 @@ class NotificationOrchestratorTest {
 
         lenient().when(templateService.render(any(), any(),
             any())).thenReturn("rendered-template");
+
+        lenient().when(eventTypeRegistry.findByCode(OrderCompletedEventType.CODE))
+            .thenReturn(java.util.Optional.of(new OrderCompletedEventType()));
     }
 
     @Test
@@ -118,7 +126,7 @@ class NotificationOrchestratorTest {
         ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
         verify(notificationRepository, times(2)).save(captor.capture());
         assertThat(captor.getAllValues().get(1).getStatus()).isEqualTo(NotificationStatus.FAILED);
-        assertThat(captor.getAllValues().get(1).getErrorMessage()).isEqualTo("SMTP error");
+        assertThat(captor.getAllValues().get(1).getErrorMessage()).isEqualTo("SEND_FAILED:RuntimeException");
     }
 
     @Test
@@ -140,7 +148,7 @@ class NotificationOrchestratorTest {
             .getStatus()).isEqualTo(NotificationStatus.FAILED);
 
         assertThat(captor.getAllValues().get(1)
-            .getErrorMessage()).contains("max 5 email notifications per 1h");
+            .getErrorMessage()).isEqualTo("RATE_LIMIT_EXCEEDED");
 
         verify(providerRegistry, never()).getProvider(any());
     }
@@ -182,5 +190,19 @@ class NotificationOrchestratorTest {
         verify(notificationRepository, times(4)).save(any());
         verify(emailProvider).send(any(), any());
         verify(smsProvider).send(any(), any());
+    }
+
+    @Test
+    void shouldSkipChannel_whenEventTypeUnknown() {
+        when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
+        when(userPreferenceRepository.findByUserId("user-1"))
+            .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
+        when(eventTypeRegistry.findByCode(OrderCompletedEventType.CODE))
+            .thenReturn(Optional.empty());
+
+        orchestrator.process(NotificationTestData.defaultEvent());
+
+        verifyNoInteractions(notificationRepository);
+        verifyNoInteractions(providerRegistry);
     }
 }

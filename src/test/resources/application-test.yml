@@ -12,8 +12,8 @@ spring:
 logging:
   level:
     com.pheme.phemenotify: DEBUG
-    org.springframework.kafka: WARN
     org.hibernate.SQL: WARN
     org.testcontainers: DEBUG
     com.github.dockerjava: WARN
     com.github.dockerjava.zerodep: DEBUG
+    org.springframework.kafka: DEBUG

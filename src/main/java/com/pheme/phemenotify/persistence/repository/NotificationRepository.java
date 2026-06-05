@@ -24,14 +24,14 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
             WITH daily_stats AS (
                 SELECT
                     channel, event_type,
-                    DATE_TRUNC('day', created_at) AS day,
+                    DATE_TRUNC('day', created_at)::date AS day,
                     COUNT(*) AS total,
                     COUNT(*) FILTER (WHERE status = 'DELIVERED') AS delivered,
                     COUNT(*) FILTER (WHERE status = 'FAILED')    AS failed,
                     ROUND(COUNT(*) FILTER (WHERE status = 'DELIVERED') * 100.0 / COUNT(*), 2) AS delivery_rate
                 FROM notifications
                 WHERE created_at >= :startDate AND created_at < :endDate
-                GROUP BY channel, event_type, DATE_TRUNC('day', created_at)
+                GROUP BY channel, event_type, DATE_TRUNC('day', created_at)::date
             )
             SELECT channel, event_type, day, total, delivered, failed, delivery_rate,
                 ROUND(AVG(delivery_rate) OVER (

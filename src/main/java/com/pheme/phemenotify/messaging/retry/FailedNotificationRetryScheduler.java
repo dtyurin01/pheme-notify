@@ -70,7 +70,7 @@ public class FailedNotificationRetryScheduler {
         return new NotificationEvent(
             (String) raw.get("id"),
             (String) raw.get("userId"),
-            failed.getEventType(),
+            failed.getEventType().getCode(),
             failed.getChannel(),
             (Map<String, String>) raw.get("payload"),
             Instant.parse((String) raw.get("occurredAt"))
