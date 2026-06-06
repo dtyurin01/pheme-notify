@@ -79,6 +79,17 @@ public class NotificationTestData {
         );
     }
 
+    public static NotificationEvent eventFor(String id, String userId, Map<String, String> payload) {
+        return new NotificationEvent(
+            id,
+            userId,
+            OrderCompletedEventType.CODE,
+            Channel.EMAIL,
+            payload,
+            Instant.now()
+        );
+    }
+
     public static NotificationEvent eventWithPayload(Map<String, String> payload) {
         return new NotificationEvent(
             "event-1",
