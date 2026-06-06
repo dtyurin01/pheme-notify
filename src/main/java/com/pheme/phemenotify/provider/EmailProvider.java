@@ -38,7 +38,7 @@ public class EmailProvider implements NotificationProvider {
                     MimeMessage message = mailSender.createMimeMessage();
                     MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
                     helper.setTo(email);
-                    helper.setSubject("Notification: " + event.eventType().getCode());
+                    helper.setSubject("Notification: " + event.eventType());
                     helper.setText(renderedTemplate, true); // true = HTML
                     mailSender.send(message);
                     log.info("Email sent to user {}", event.userId());

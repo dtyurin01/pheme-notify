@@ -18,6 +18,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import com.pheme.phemenotify.util.NotificationPersistenceHelper;
+import static com.pheme.phemenotify.util.NotificationPersistenceHelper.buildNotification;
 import static com.pheme.phemenotify.util.TestDateUtils.daysAgo;
 import static com.pheme.phemenotify.util.TestDateUtils.localDaysAgo;
 import static com.pheme.phemenotify.util.TestDateUtils.today;
@@ -272,26 +274,12 @@ public class NotificationRepositoryTest extends BaseIntegrationTest {
     //      HELPERS
     private void saveWithDate(Instant createdAt, Channel channel,
                               NotificationStatus status, String key) {
-        saveWithDateAndType(createdAt, channel, status, key, orderCompleted);
+        NotificationPersistenceHelper.saveWithDate(notificationRepository, orderCompleted, createdAt, channel, status, key);
     }
 
     private void saveWithDateAndType(Instant createdAt, Channel channel,
                                      NotificationStatus status, String key,
                                      EventType eventType) {
-        Notification saved = notificationRepository.save(
-            buildNotification(key, channel, status, eventType));
-        notificationRepository.updateCreatedAt(saved.getId(), createdAt);
-    }
-
-    private Notification buildNotification(String key, Channel channel,
-                                           NotificationStatus status, EventType
-                                               eventType) {
-        return Notification.builder()
-            .userId("user-123")
-            .channel(channel)
-            .eventType(eventType)
-            .idempotencyKey(key)
-            .status(status)
-            .build();
+        NotificationPersistenceHelper.saveWithDateAndType(notificationRepository, createdAt, channel, status, key, eventType);
     }
 }

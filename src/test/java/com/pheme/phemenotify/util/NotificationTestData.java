@@ -72,9 +72,20 @@ public class NotificationTestData {
         return new NotificationEvent(
             "event-1",
             "user-1",
-            new OrderCompletedEventType(),
+            OrderCompletedEventType.CODE,
             Channel.EMAIL,
             Map.of("email", "user@example.com"),
+            Instant.now()
+        );
+    }
+
+    public static NotificationEvent eventFor(String id, String userId, Map<String, String> payload) {
+        return new NotificationEvent(
+            id,
+            userId,
+            OrderCompletedEventType.CODE,
+            Channel.EMAIL,
+            payload,
             Instant.now()
         );
     }
@@ -83,7 +94,7 @@ public class NotificationTestData {
         return new NotificationEvent(
             "event-1",
             "user-1",
-            new OrderCompletedEventType(),
+            OrderCompletedEventType.CODE,
             Channel.EMAIL,
             payload,
             Instant.now()

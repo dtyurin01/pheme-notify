@@ -104,6 +104,10 @@ notification:
     backoff-base: 5m
     fixed-delay: PT1M
 
+# ─── Springdoc / Swagger ─────────────────────────────────────────────────────
+springdoc:
+  enable-kotlin: false
+
 # ─── Logging ─────────────────────────────────────────────────────────────────
 logging:
   level:

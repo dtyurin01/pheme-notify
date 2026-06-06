@@ -2,7 +2,9 @@ package com.pheme.phemenotify.messaging.consumer;
 
 
 import com.pheme.phemenotify.messaging.event.NotificationEvent;
+import com.pheme.phemenotify.persistence.entity.EventTypeRegistry;
 import com.pheme.phemenotify.persistence.entity.FailedNotification;
+import com.pheme.phemenotify.persistence.entity.eventtype.OrderCompletedEventType;
 import com.pheme.phemenotify.persistence.repository.FailedNotificationRepository;
 import com.pheme.phemenotify.service.NotificationOrchestrator;
 import com.pheme.phemenotify.util.NotificationTestData;
@@ -13,10 +15,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class NotificationEventConsumerTest {
@@ -26,6 +31,9 @@ public class NotificationEventConsumerTest {
 
     @Mock
     FailedNotificationRepository failedNotificationRepository;
+
+    @Mock
+    EventTypeRegistry eventTypeRegistry;
 
     @InjectMocks
     NotificationEventConsumer notificationEventConsumer;
@@ -59,6 +67,8 @@ public class NotificationEventConsumerTest {
     @Test
     void shouldSaveFailedNotification_whenDltHandlerCalled() {
         NotificationEvent notificationEvent = NotificationTestData.defaultEvent();
+        when(eventTypeRegistry.findByCode(OrderCompletedEventType.CODE))
+            .thenReturn(Optional.of(new OrderCompletedEventType()));
 
         notificationEventConsumer.handleDlt(
             notificationEvent,
@@ -73,7 +83,7 @@ public class NotificationEventConsumerTest {
 
         assertThat(failedNotification.getUserId()).isEqualTo(notificationEvent.userId());
         assertThat(failedNotification.getChannel()).isEqualTo(notificationEvent.channel());
-        assertThat(failedNotification.getEventType()).isEqualTo(notificationEvent.eventType());
+        assertThat(failedNotification.getEventType().getCode()).isEqualTo(notificationEvent.eventType());
 
         assertThat(failedNotification.getErrorMessage()).isEqualTo("timeout after 3 retries");
     }
@@ -81,6 +91,8 @@ public class NotificationEventConsumerTest {
     @Test
     void shouldIncludeEventIdAndOccurredAt_whenBuildingDltPayload() {
         NotificationEvent notificationEvent = NotificationTestData.defaultEvent();
+        when(eventTypeRegistry.findByCode(OrderCompletedEventType.CODE))
+            .thenReturn(Optional.of(new OrderCompletedEventType()));
 
         notificationEventConsumer.handleDlt(
             notificationEvent,

@@ -7,6 +7,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.lifecycle.Startables;
@@ -33,8 +34,12 @@ public abstract class BaseIntegrationTest {
     static final KafkaContainer kafka =
         new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.9.0"));
 
+    static final GenericContainer<?> mailpit =
+        new GenericContainer<>("axllent/mailpit")
+            .withExposedPorts(1025, 8025);
+
     static {
-        Startables.deepStart(postgres, redis, kafka).join();
+        Startables.deepStart(postgres, redis, kafka, mailpit).join();
     }
 
     @DynamicPropertySource
@@ -45,5 +50,7 @@ public abstract class BaseIntegrationTest {
         registry.add("spring.data.redis.host", redis::getHost);
         registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
         registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
+        registry.add("spring.mail.host", mailpit::getHost);
+        registry.add("spring.mail.port", () -> mailpit.getMappedPort(1025));
     }
 }

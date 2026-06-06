@@ -2,6 +2,7 @@ package com.pheme.phemenotify.messaging.consumer;
 
 
 import com.pheme.phemenotify.messaging.event.NotificationEvent;
+import com.pheme.phemenotify.persistence.entity.EventTypeRegistry;
 import com.pheme.phemenotify.persistence.entity.FailedNotification;
 import com.pheme.phemenotify.persistence.repository.FailedNotificationRepository;
 import com.pheme.phemenotify.service.NotificationOrchestrator;
@@ -26,6 +27,7 @@ public class NotificationEventConsumer {
 
     private final NotificationOrchestrator orchestrator;
     private final FailedNotificationRepository failedNotificationRepository;
+    private final EventTypeRegistry eventTypeRegistry;
 
 
     @RetryableTopic(
@@ -51,7 +53,7 @@ public class NotificationEventConsumer {
         FailedNotification failed = FailedNotification.builder()
             .userId(event.userId())
             .channel(event.channel())
-            .eventType(event.eventType())
+            .eventType(eventTypeRegistry.findByCode(event.eventType()).orElse(null))
             .eventPayload(buildEventPayload(event))
             .errorMessage(errorMessage)
             .build();
@@ -63,7 +65,7 @@ public class NotificationEventConsumer {
         Map<String, Object> payload = new HashMap<>();
         payload.put("id", event.id());
         payload.put("userId", event.userId());
-        payload.put("eventType", event.eventType().getCode());
+        payload.put("eventType", event.eventType());
         payload.put("channel", event.channel().name());
         payload.put("occurredAt", event.occurredAt().toString());
         payload.put("payload", event.payload());

@@ -5,6 +5,8 @@ import com.pheme.phemenotify.api.exception.RateLimitExceededException;
 import com.pheme.phemenotify.infrastructure.redis.RedisDeduplicationAdapter;
 import com.pheme.phemenotify.messaging.event.NotificationEvent;
 import com.pheme.phemenotify.persistence.entity.Channel;
+import com.pheme.phemenotify.persistence.entity.EventType;
+import com.pheme.phemenotify.persistence.entity.EventTypeRegistry;
 import com.pheme.phemenotify.persistence.entity.Notification;
 import com.pheme.phemenotify.persistence.entity.NotificationStatus;
 import com.pheme.phemenotify.persistence.entity.UserPreferences;
@@ -33,6 +35,7 @@ public class NotificationOrchestrator {
     private final ProviderRegistry providerRegistry;
     private final RateLimitService rateLimitService;
     private final TemplateService templateService;
+    private final EventTypeRegistry eventTypeRegistry;
 
     public boolean processRetry(NotificationEvent notificationEvent) {
         Optional<UserPreferences> preferences = resolvePreferences(notificationEvent.userId());
@@ -78,10 +81,17 @@ public class NotificationOrchestrator {
     }
 
     private boolean processChannel(NotificationEvent notificationEvent, Channel channel) {
+        Optional<EventType> eventTypeOpt = eventTypeRegistry.findByCode(notificationEvent.eventType());
+        if (eventTypeOpt.isEmpty()) {
+            log.warn("Unknown event type {} for event {}, skipping channel {}",
+                notificationEvent.eventType(), notificationEvent.id(), channel);
+            return false;
+        }
+        EventType eventType = eventTypeOpt.get();
         String idempotencyKey = IDEMPOTENCY_KEY_FORMAT.formatted(notificationEvent.id(), channel);
         Notification notification = Notification.pending(
             notificationEvent.userId(),
-            notificationEvent.eventType(),
+            eventType,
             channel,
             idempotencyKey
         );
@@ -104,7 +114,7 @@ public class NotificationOrchestrator {
 
         try {
             String renderedTemplate = templateService.render(
-                notificationEvent.eventType(),
+                eventType,
                 channel,
                 new HashMap<>(notificationEvent.payload())
             );

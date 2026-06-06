@@ -1,5 +1,6 @@
 package com.pheme.phemenotify.api.dto.response;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
@@ -12,5 +13,5 @@ public record DeliveryStatsResponse(
         long failed,
         BigDecimal deliveryRate,
         BigDecimal rollingWeeklyAvg
-) {
+) implements Serializable {
 }
