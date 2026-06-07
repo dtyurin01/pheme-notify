@@ -14,11 +14,14 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.MDC;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -59,6 +62,40 @@ public class NotificationEventConsumerTest {
         assertThatThrownBy(() -> notificationEventConsumer.handleEvent(notificationEvent))
             .isInstanceOf(RuntimeException.class)
             .hasMessage("processing failed");
+    }
+
+    @Test
+    void shouldPutEventIdInMdc_whenProcessingEvent() {
+        NotificationEvent notificationEvent = NotificationTestData.defaultEvent();
+        AtomicReference<String> mdcDuringProcessing = new AtomicReference<>();
+        doAnswer(invocation -> {
+            mdcDuringProcessing.set(MDC.get("eventId"));
+            return null;
+        }).when(notificationOrchestrator).process(notificationEvent);
+
+        notificationEventConsumer.handleEvent(notificationEvent);
+
+        assertThat(mdcDuringProcessing.get()).isEqualTo(notificationEvent.id());
+    }
+
+    @Test
+    void shouldClearMdc_whenEventProcessedSuccessfully() {
+        NotificationEvent notificationEvent = NotificationTestData.defaultEvent();
+
+        notificationEventConsumer.handleEvent(notificationEvent);
+
+        assertThat(MDC.get("eventId")).isNull();
+    }
+
+    @Test
+    void shouldClearMdc_whenOrchestratorThrows() {
+        NotificationEvent notificationEvent = NotificationTestData.defaultEvent();
+        doThrow(new RuntimeException("processing failed"))
+            .when(notificationOrchestrator).process(notificationEvent);
+
+        assertThatThrownBy(() -> notificationEventConsumer.handleEvent(notificationEvent));
+
+        assertThat(MDC.get("eventId")).isNull();
     }
 
 

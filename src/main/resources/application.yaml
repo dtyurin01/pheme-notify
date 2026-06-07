@@ -110,6 +110,8 @@ springdoc:
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
 logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} [eventId=%X{eventId}] - %msg%n"
   level:
     com.pheme.phemenotify: DEBUG
     org.springframework.kafka: INFO
