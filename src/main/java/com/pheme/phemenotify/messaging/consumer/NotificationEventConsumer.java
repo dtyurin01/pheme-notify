@@ -8,6 +8,7 @@ import com.pheme.phemenotify.persistence.repository.FailedNotificationRepository
 import com.pheme.phemenotify.service.NotificationOrchestrator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.kafka.annotation.BackOff;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -39,9 +40,14 @@ public class NotificationEventConsumer {
     @KafkaListener(topics = "notification.events", groupId = "notification-hub")
     public void handleEvent(NotificationEvent
                                 event) {
-        log.info("Received event: id:{}, userId:{}", event.id(), event.userId());
+        MDC.put("eventId", event.id());
+        try {
+            log.info("Received event: id:{}, userId:{}", event.id(), event.userId());
 
-        orchestrator.process(event);
+            orchestrator.process(event);
+        } finally {
+            MDC.clear();
+        }
     }
 
     @DltHandler
