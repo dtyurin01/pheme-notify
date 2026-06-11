@@ -1,6 +1,7 @@
 package com.pheme.phemenotify.service;
 
 import com.pheme.phemenotify.api.exception.RateLimitExceededException;
+import com.pheme.phemenotify.infrastructure.metrics.NotificationMetrics;
 import com.pheme.phemenotify.infrastructure.redis.RedisDeduplicationAdapter;
 import com.pheme.phemenotify.persistence.entity.Channel;
 import com.pheme.phemenotify.persistence.entity.EventTypeRegistry;
@@ -27,6 +28,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,6 +55,9 @@ class NotificationOrchestratorTest {
     @Mock
     private EventTypeRegistry eventTypeRegistry;
 
+    @Mock
+    private NotificationMetrics notificationMetrics;
+
     @InjectMocks
     private NotificationOrchestrator orchestrator;
 
@@ -67,6 +72,9 @@ class NotificationOrchestratorTest {
 
         lenient().when(eventTypeRegistry.findByCode(OrderCompletedEventType.CODE))
             .thenReturn(java.util.Optional.of(new OrderCompletedEventType()));
+
+        lenient().when(notificationMetrics.sendTimer())
+            .thenReturn(io.micrometer.core.instrument.Timer.start(new io.micrometer.core.instrument.simple.SimpleMeterRegistry()));
     }
 
     @Test
@@ -111,6 +119,9 @@ class NotificationOrchestratorTest {
         ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
         verify(notificationRepository, times(2)).save(captor.capture());
         assertThat(captor.getAllValues().get(1).getStatus()).isEqualTo(NotificationStatus.DELIVERED);
+        verify(notificationMetrics).incrementSent(Channel.EMAIL);
+        verify(notificationMetrics, never()).incrementFailed(any());
+        verify(notificationMetrics).recordSendDuration(any(), eq(Channel.EMAIL));
     }
 
     @Test
@@ -127,6 +138,9 @@ class NotificationOrchestratorTest {
         verify(notificationRepository, times(2)).save(captor.capture());
         assertThat(captor.getAllValues().get(1).getStatus()).isEqualTo(NotificationStatus.FAILED);
         assertThat(captor.getAllValues().get(1).getErrorMessage()).isEqualTo("SEND_FAILED:RuntimeException");
+        verify(notificationMetrics).incrementFailed(Channel.EMAIL);
+        verify(notificationMetrics, never()).incrementSent(any());
+        verify(notificationMetrics).recordSendDuration(any(), eq(Channel.EMAIL));
     }
 
     @Test
@@ -151,6 +165,7 @@ class NotificationOrchestratorTest {
             .getErrorMessage()).isEqualTo("RATE_LIMIT_EXCEEDED");
 
         verify(providerRegistry, never()).getProvider(any());
+        verifyNoInteractions(notificationMetrics);
     }
 
     @Test

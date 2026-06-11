@@ -5,6 +5,10 @@ spring:
   application:
     name: pheme-notify
 
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+
   # ─── DataSource (PostgreSQL) ────────────────────────────────────────────────
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:notification_hub}
@@ -43,6 +47,7 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "com.pheme.phemenotify.messaging.event"
+        spring.json.value.default.type: com.pheme.phemenotify.messaging.event.NotificationEvent
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -63,6 +68,7 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  shutdown: graceful
 
 # ─── Actuator & Metrics ───────────────────────────────────────────────────────
 management:
