@@ -1,0 +1,1 @@
+Your payment for order [(${orderId})] failed: [(${reason})]. Amount: [(${amount})]. Please update your payment method.

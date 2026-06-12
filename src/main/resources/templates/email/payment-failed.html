@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Payment Failed</title>
+</head>
+<body>
+    <h2>Your payment could not be processed</h2>
+    <p>Order ID: <b th:text="${orderId}"></b></p>
+    <p>Amount: <b th:text="${amount}"></b></p>
+    <p>Reason: <b th:text="${reason}"></b></p>
+
+    <p>Please update your payment method and try again.</p>
+</body>
+</html>
