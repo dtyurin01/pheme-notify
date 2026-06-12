@@ -4,5 +4,5 @@ import com.pheme.phemenotify.messaging.event.NotificationEvent;
 
 public interface NotificationProvider {
 
-    void send(NotificationEvent event, String renderedTemplate);
+  void send(NotificationEvent event, String renderedTemplate);
 }

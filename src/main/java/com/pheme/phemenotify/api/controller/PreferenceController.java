@@ -14,17 +14,16 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class PreferenceController {
 
-    private final PreferenceService preferenceService;
+  private final PreferenceService preferenceService;
 
-    @GetMapping("/{userId}/preferences")
-    public ResponseEntity<PreferenceResponse> getPreferences(@PathVariable String userId) {
-        return ResponseEntity.ok(preferenceService.getByUserId(userId));
-    }
+  @GetMapping("/{userId}/preferences")
+  public ResponseEntity<PreferenceResponse> getPreferences(@PathVariable String userId) {
+    return ResponseEntity.ok(preferenceService.getByUserId(userId));
+  }
 
-    @PutMapping("/{userId}/preferences")
-    public ResponseEntity<PreferenceResponse> upsertPreferences(
-            @PathVariable String userId,
-            @Valid @RequestBody CreatePreferenceRequest request) {
-        return ResponseEntity.ok(preferenceService.upsert(userId, request));
-    }
+  @PutMapping("/{userId}/preferences")
+  public ResponseEntity<PreferenceResponse> upsertPreferences(
+      @PathVariable String userId, @Valid @RequestBody CreatePreferenceRequest request) {
+    return ResponseEntity.ok(preferenceService.upsert(userId, request));
+  }
 }

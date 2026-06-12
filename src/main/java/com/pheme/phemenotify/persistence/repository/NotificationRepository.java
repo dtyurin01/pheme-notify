@@ -2,25 +2,29 @@ package com.pheme.phemenotify.persistence.repository;
 
 import com.pheme.phemenotify.persistence.entity.Notification;
 import com.pheme.phemenotify.persistence.projection.DeliveryStatsProjection;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
-    Optional<Notification> findByIdempotencyKey(String idempotencyKey);
+  Optional<Notification> findByIdempotencyKey(String idempotencyKey);
 
-    @Modifying
-    @Transactional
-    @Query(value="UPDATE notifications SET created_at = :createdAt WHERE id = :id", nativeQuery = true)
-    void updateCreatedAt(@Param("id") UUID id, @Param("createdAt") Instant createdAt);
-    @Query(value = """
+  @Modifying
+  @Transactional
+  @Query(
+      value = "UPDATE notifications SET created_at = :createdAt WHERE id = :id",
+      nativeQuery = true)
+  void updateCreatedAt(@Param("id") UUID id, @Param("createdAt") Instant createdAt);
+
+  @Query(
+      value =
+          """
             WITH daily_stats AS (
                 SELECT
                     channel, event_type,
@@ -39,6 +43,8 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
                 ), 2) AS rolling_weekly_avg
             FROM daily_stats
             ORDER BY day DESC, channel
-            """, nativeQuery = true)
-    List<DeliveryStatsProjection> findDeliveryStats(@Param("startDate") Instant startDate, @Param("endDate") Instant endDate);
+            """,
+      nativeQuery = true)
+  List<DeliveryStatsProjection> findDeliveryStats(
+      @Param("startDate") Instant startDate, @Param("endDate") Instant endDate);
 }

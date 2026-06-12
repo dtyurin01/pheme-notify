@@ -1,5 +1,8 @@
 package com.pheme.phemenotify.provider;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 import com.pheme.phemenotify.BaseIntegrationTest;
 import com.pheme.phemenotify.messaging.event.NotificationEvent;
@@ -8,6 +11,8 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
+import java.util.Map;
+import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -17,213 +22,202 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.util.Map;
-import java.util.Properties;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
 @TestPropertySource(properties = "management.health.mail.enabled=false")
 public class EmailProviderCircuitBreakerIntegrationTest extends BaseIntegrationTest {
 
-    private static final int SLIDING_WINDOW_SIZE = 10;
-    private static final int PERMITTED_CALLS_IN_HALF_OPEN = 3;
-    private static final int FAILURE_RATE_THRESHOLD_PCT = 50; // 50%
-    @Autowired
-    private EmailProvider emailProvider;
+  private static final int SLIDING_WINDOW_SIZE = 10;
+  private static final int PERMITTED_CALLS_IN_HALF_OPEN = 3;
+  private static final int FAILURE_RATE_THRESHOLD_PCT = 50; // 50%
+  @Autowired private EmailProvider emailProvider;
 
-    @Autowired
-    private CircuitBreakerRegistry circuitBreakerRegistry;
+  @Autowired private CircuitBreakerRegistry circuitBreakerRegistry;
 
-    @MockitoBean
-    private JavaMailSender mailSender;
+  @MockitoBean private JavaMailSender mailSender;
 
-    private NotificationEvent event;
+  private NotificationEvent event;
 
-    @BeforeEach
-    void setUp() {
-        circuitBreakerRegistry.find("email").ifPresent(CircuitBreaker::reset);
-        event = NotificationTestData.eventWithPayload(Map.of("email", "user@example.com"));
-        when(mailSender.createMimeMessage())
-            .thenReturn(new MimeMessage(Session.getDefaultInstance(new Properties())));
+  @BeforeEach
+  void setUp() {
+    circuitBreakerRegistry.find("email").ifPresent(CircuitBreaker::reset);
+    event = NotificationTestData.eventWithPayload(Map.of("email", "user@example.com"));
+    when(mailSender.createMimeMessage())
+        .thenReturn(new MimeMessage(Session.getDefaultInstance(new Properties())));
+  }
+
+  //  ─────────── helpers ───────────
+
+  private void makeFailingCalls(int count) {
+    doThrow(new RuntimeException("SMTP down")).when(mailSender).send(any(MimeMessage.class));
+
+    for (int i = 0; i < count; i++) {
+      try {
+        emailProvider.send(event, "<h1>Hello!</h1>");
+      } catch (RuntimeException ignored) {
+        // Ignored - we're testing circuit breaker behavior
+      }
     }
+  }
 
-    //  ─────────── helpers ───────────
+  private void makeSuccessfulCalls(int count) {
+    doNothing().when(mailSender).send(any(MimeMessage.class));
 
-    private void makeFailingCalls(int count) {
-        doThrow(new RuntimeException("SMTP down"))
-            .when(mailSender).send(any(MimeMessage.class));
-
-        for (int i = 0; i < count; i++) {
-            try {
-                emailProvider.send(event, "<h1>Hello!</h1>");
-            } catch (RuntimeException ignored) {
-                // Ignored - we're testing circuit breaker behavior
-            }
-        }
+    for (int i = 0; i < count; i++) {
+      emailProvider.send(event, "<h1>Hello!</h1>");
     }
+  }
 
-    private void makeSuccessfulCalls(int count) {
-        doNothing().when(mailSender).send(any(MimeMessage.class));
+  private void openCircuitBreaker() {
+    makeFailingCalls(SLIDING_WINDOW_SIZE);
+  }
 
-        for (int i = 0; i < count; i++) {
-            emailProvider.send(event, "<h1>Hello!</h1>");
-        }
-    }
+  private void transitionToHalfOpen() {
+    circuitBreakerRegistry.circuitBreaker("email").transitionToHalfOpenState();
+  }
 
-    private void openCircuitBreaker() {
-        makeFailingCalls(SLIDING_WINDOW_SIZE);
-    }
+  private void stubMailSenderWithFailures(int failCount) {
+    doAnswer(
+            new Answer<Void>() {
+              int callCount = 0;
 
-    private void transitionToHalfOpen() {
-        circuitBreakerRegistry.circuitBreaker("email").transitionToHalfOpenState();
-    }
-
-    private void stubMailSenderWithFailures(int failCount) {
-        doAnswer(new Answer<Void>() {
-            int callCount = 0;
-
-            @Override
-            public Void answer(InvocationOnMock invocation) {
+              @Override
+              public Void answer(InvocationOnMock invocation) {
                 callCount++;
                 if (callCount <= failCount) {
-                    throw new RuntimeException("SMTP down");
+                  throw new RuntimeException("SMTP down");
                 }
                 return null;
-            }
-        }).when(mailSender).send(any(MimeMessage.class));
+              }
+            })
+        .when(mailSender)
+        .send(any(MimeMessage.class));
+  }
 
-    }
+  //  ─────────── tests ───────────
 
-    //  ─────────── tests ───────────
+  @Test
+  void shouldOpenCircuitBreaker_whenFailureThresholdExceeded() {
+    openCircuitBreaker();
+    verify(mailSender, times(SLIDING_WINDOW_SIZE)).send(any(MimeMessage.class));
 
-    @Test
-    void shouldOpenCircuitBreaker_whenFailureThresholdExceeded() {
-        openCircuitBreaker();
-        verify(mailSender, times(SLIDING_WINDOW_SIZE)).send(any(MimeMessage.class));
+    clearInvocations(mailSender);
 
-        clearInvocations(mailSender);
+    assertThatThrownBy(() -> emailProvider.send(event, "<h1>Hello!</h1>"))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessageContaining("Email service unavailable");
 
-        assertThatThrownBy(() -> emailProvider.send(event, "<h1>Hello!</h1>"))
-            .isInstanceOf(RuntimeException.class)
-            .hasMessageContaining("Email service unavailable");
+    verify(mailSender, never()).send(any(MimeMessage.class));
+  }
 
-        verify(mailSender, never()).send(any(MimeMessage.class));
-    }
+  @Test
+  void shouldOpenAtExactThreshold_whenFailureRateEquals50Percent() {
+    // 5/10 = exactly 50% threshold
+    stubMailSenderWithFailures(SLIDING_WINDOW_SIZE / 2);
 
-    @Test
-    void shouldOpenAtExactThreshold_whenFailureRateEquals50Percent() {
-        // 5/10 = exactly 50% threshold
-        stubMailSenderWithFailures(SLIDING_WINDOW_SIZE / 2);
-
-        for (int i = 0; i < SLIDING_WINDOW_SIZE; i++) {
-            try {
-                emailProvider.send(event, "<h1>Hello!</h1>");
-            } catch (RuntimeException ignored) {
-            }
-        }
-
-        clearInvocations(mailSender);
-
-        assertThatThrownBy(() -> emailProvider.send(event, "<h1>Hi</h1>"))
-            .isInstanceOf(RuntimeException.class)
-            .hasMessageContaining("Email service unavailable");
-
-        verify(mailSender, never()).send(any(MimeMessage.class));
-
-    }
-
-    @Test
-    void shouldKeepCircuitClosed_whenFailureRateBelowThreshold() {
-        // 4/10 = 40% < 50% threshold
-        stubMailSenderWithFailures(FAILURE_RATE_THRESHOLD_PCT * SLIDING_WINDOW_SIZE / 100 - 1);
-
-        for (int i = 0; i < SLIDING_WINDOW_SIZE; i++) {
-            try {
-                emailProvider.send(event, "<h1>Hello!</h1>");
-            } catch (RuntimeException ignored) {
-            }
-        }
-
-        clearInvocations(mailSender);
-
-        emailProvider.send(event, "<h1>Hello</h1>");
-
-        verify(mailSender).send(any(MimeMessage.class));
-    }
-
-    @Test
-    void shouldAllowCallsThrough_whenCircuitBreakerInHalfOpenState() {
-        openCircuitBreaker();
-        transitionToHalfOpen();
-
-        clearInvocations(mailSender);
-        doNothing().when(mailSender).send(any(MimeMessage.class));
-
+    for (int i = 0; i < SLIDING_WINDOW_SIZE; i++) {
+      try {
         emailProvider.send(event, "<h1>Hello!</h1>");
-        verify(mailSender).send(any(MimeMessage.class));
+      } catch (RuntimeException ignored) {
+      }
     }
 
-    @Test
-    void shouldCloseCircuit_whenHalfOpenCallsSucceed() {
-        openCircuitBreaker();
-        transitionToHalfOpen();
+    clearInvocations(mailSender);
 
-        doNothing().when(mailSender).send(any(MimeMessage.class));
+    assertThatThrownBy(() -> emailProvider.send(event, "<h1>Hi</h1>"))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessageContaining("Email service unavailable");
 
-        makeSuccessfulCalls(PERMITTED_CALLS_IN_HALF_OPEN);
-        clearInvocations(mailSender);
+    verify(mailSender, never()).send(any(MimeMessage.class));
+  }
 
+  @Test
+  void shouldKeepCircuitClosed_whenFailureRateBelowThreshold() {
+    // 4/10 = 40% < 50% threshold
+    stubMailSenderWithFailures(FAILURE_RATE_THRESHOLD_PCT * SLIDING_WINDOW_SIZE / 100 - 1);
+
+    for (int i = 0; i < SLIDING_WINDOW_SIZE; i++) {
+      try {
         emailProvider.send(event, "<h1>Hello!</h1>");
-        verify(mailSender).send(any(MimeMessage.class));
+      } catch (RuntimeException ignored) {
+      }
     }
 
-    @Test
-    void shouldReopenCircuit_whenHalfOpenCallFails() {
-        openCircuitBreaker();
-        transitionToHalfOpen();
+    clearInvocations(mailSender);
 
-        doThrow(new RuntimeException("SMTP down"))
-            .when(mailSender).send(any(MimeMessage.class));
+    emailProvider.send(event, "<h1>Hello</h1>");
 
-        for (int i = 0; i < PERMITTED_CALLS_IN_HALF_OPEN; i++) {
-            try {
-                emailProvider.send(event, "<h1>Hello!</h1>");
-            } catch (RuntimeException ignored) {
-            }
-        }
+    verify(mailSender).send(any(MimeMessage.class));
+  }
 
-        clearInvocations(mailSender);
+  @Test
+  void shouldAllowCallsThrough_whenCircuitBreakerInHalfOpenState() {
+    openCircuitBreaker();
+    transitionToHalfOpen();
 
-        assertThatThrownBy(() -> emailProvider.send(event, "<h1>Hello!</h1>"))
-            .isInstanceOf(RuntimeException.class)
-            .hasMessageContaining("Email service unavailable");
+    clearInvocations(mailSender);
+    doNothing().when(mailSender).send(any(MimeMessage.class));
 
-        verify(mailSender, never()).send(any(MimeMessage.class));
-    }
+    emailProvider.send(event, "<h1>Hello!</h1>");
+    verify(mailSender).send(any(MimeMessage.class));
+  }
 
-    @Test
-    void shouldNotCountOldFailures_whenSlidingWindowMoves() {
-        // 4F + 6S = 40% < 50% → window is full, CB still closed
-        stubMailSenderWithFailures(FAILURE_RATE_THRESHOLD_PCT * SLIDING_WINDOW_SIZE / 100 - 1);
-        for (int i = 0; i < SLIDING_WINDOW_SIZE; i++) {
-            try {
-                emailProvider.send(event, "<h1>Hello!</h1>");
-            } catch (RuntimeException ignored) {
-            }
-        }
+  @Test
+  void shouldCloseCircuit_whenHalfOpenCallsSucceed() {
+    openCircuitBreaker();
+    transitionToHalfOpen();
 
-        // 10 success → old failures pushed out, rate = 0%
-        makeSuccessfulCalls(SLIDING_WINDOW_SIZE);
+    doNothing().when(mailSender).send(any(MimeMessage.class));
 
-        // 4 new failures → 40% < 50% → CB still closed
-        makeFailingCalls(FAILURE_RATE_THRESHOLD_PCT * SLIDING_WINDOW_SIZE / 100 - 1);
+    makeSuccessfulCalls(PERMITTED_CALLS_IN_HALF_OPEN);
+    clearInvocations(mailSender);
 
-        clearInvocations(mailSender);
-        doNothing().when(mailSender).send(any(MimeMessage.class));
+    emailProvider.send(event, "<h1>Hello!</h1>");
+    verify(mailSender).send(any(MimeMessage.class));
+  }
 
+  @Test
+  void shouldReopenCircuit_whenHalfOpenCallFails() {
+    openCircuitBreaker();
+    transitionToHalfOpen();
+
+    doThrow(new RuntimeException("SMTP down")).when(mailSender).send(any(MimeMessage.class));
+
+    for (int i = 0; i < PERMITTED_CALLS_IN_HALF_OPEN; i++) {
+      try {
         emailProvider.send(event, "<h1>Hello!</h1>");
-        verify(mailSender).send(any(MimeMessage.class));
+      } catch (RuntimeException ignored) {
+      }
     }
+
+    clearInvocations(mailSender);
+
+    assertThatThrownBy(() -> emailProvider.send(event, "<h1>Hello!</h1>"))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessageContaining("Email service unavailable");
+
+    verify(mailSender, never()).send(any(MimeMessage.class));
+  }
+
+  @Test
+  void shouldNotCountOldFailures_whenSlidingWindowMoves() {
+    // 4F + 6S = 40% < 50% → window is full, CB still closed
+    stubMailSenderWithFailures(FAILURE_RATE_THRESHOLD_PCT * SLIDING_WINDOW_SIZE / 100 - 1);
+    for (int i = 0; i < SLIDING_WINDOW_SIZE; i++) {
+      try {
+        emailProvider.send(event, "<h1>Hello!</h1>");
+      } catch (RuntimeException ignored) {
+      }
+    }
+
+    // 10 success → old failures pushed out, rate = 0%
+    makeSuccessfulCalls(SLIDING_WINDOW_SIZE);
+
+    // 4 new failures → 40% < 50% → CB still closed
+    makeFailingCalls(FAILURE_RATE_THRESHOLD_PCT * SLIDING_WINDOW_SIZE / 100 - 1);
+
+    clearInvocations(mailSender);
+    doNothing().when(mailSender).send(any(MimeMessage.class));
+
+    emailProvider.send(event, "<h1>Hello!</h1>");
+    verify(mailSender).send(any(MimeMessage.class));
+  }
 }

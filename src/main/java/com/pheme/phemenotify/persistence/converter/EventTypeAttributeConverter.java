@@ -12,20 +12,21 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class EventTypeAttributeConverter implements AttributeConverter<EventType, String> {
 
-    private final EventTypeRegistry registry;
+  private final EventTypeRegistry registry;
 
-    @Override
-    public String convertToDatabaseColumn(EventType eventType) {
-        return eventType != null ? eventType.getCode() : null;
+  @Override
+  public String convertToDatabaseColumn(EventType eventType) {
+    return eventType != null ? eventType.getCode() : null;
+  }
+
+  @Override
+  public EventType convertToEntityAttribute(String code) {
+    if (code == null) {
+      return null;
     }
 
-    @Override
-    public EventType convertToEntityAttribute(String code) {
-        if (code == null){
-            return null;
-        }
-
-        return registry.findByCode(code)
-                .orElseThrow(() -> new IllegalArgumentException("Unknown event type: " + code));
-    }
+    return registry
+        .findByCode(code)
+        .orElseThrow(() -> new IllegalArgumentException("Unknown event type: " + code));
+  }
 }

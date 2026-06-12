@@ -10,13 +10,13 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class DeduplicationService {
 
-    private final RedisDeduplicationAdapter deduplicationAdapter;
+  private final RedisDeduplicationAdapter deduplicationAdapter;
 
-    public boolean isNew(String eventId) {
-        boolean isNew = deduplicationAdapter.isNew(eventId);
-        if (!isNew) {
-            log.debug("Duplicate event detected, skipping: eventId={}", eventId);
-        }
-        return isNew;
+  public boolean isNew(String eventId) {
+    boolean isNew = deduplicationAdapter.isNew(eventId);
+    if (!isNew) {
+      log.debug("Duplicate event detected, skipping: eventId={}", eventId);
     }
+    return isNew;
+  }
 }

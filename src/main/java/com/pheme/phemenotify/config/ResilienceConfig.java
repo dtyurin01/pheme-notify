@@ -7,16 +7,16 @@ import org.springframework.cloud.client.circuitbreaker.Customizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-
 @Configuration
 @RequiredArgsConstructor
 public class ResilienceConfig {
 
-    private final ResilienceProperties props;
+  private final ResilienceProperties props;
 
-    @Bean
-    public Customizer<Resilience4JCircuitBreakerFactory> emailCircuitBreakerConfig() {
-        CircuitBreakerConfig config = CircuitBreakerConfig.custom()
+  @Bean
+  public Customizer<Resilience4JCircuitBreakerFactory> emailCircuitBreakerConfig() {
+    CircuitBreakerConfig config =
+        CircuitBreakerConfig.custom()
             .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
             .slidingWindowSize(props.getSlidingWindowSize())
             .failureRateThreshold(props.getFailureRateThreshold())
@@ -24,8 +24,6 @@ public class ResilienceConfig {
             .permittedNumberOfCallsInHalfOpenState(props.getPermittedCallsInHalfOpen())
             .build();
 
-        return factory -> factory.configure(
-            builder -> builder.circuitBreakerConfig(config), "email"
-        );
-    }
+    return factory -> factory.configure(builder -> builder.circuitBreakerConfig(config), "email");
+  }
 }
