@@ -6,7 +6,7 @@ services:
     image: confluentinc/cp-kafka:7.9.0
     container_name: pheme-kafka
     ports:
-      - "9092:9092"
+      - "127.0.0.1:9092:9092"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -26,13 +26,14 @@ services:
       retries: 10
 
   kafka-ui:
-    image: provectuslabs/kafka-ui:latest
+    image: provectuslabs/kafka-ui:v0.7.2
     container_name: pheme-kafka-ui
+    profiles: ["dev"]
     depends_on:
       kafka:
         condition: service_healthy
     ports:
-      - "8090:8080"
+      - "127.0.0.1:8090:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
@@ -43,7 +44,7 @@ services:
     image: postgres:17
     container_name: pheme-postgres
     ports:
-      - "55200:5432"
+      - "127.0.0.1:55200:5432"
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
@@ -61,7 +62,7 @@ services:
     container_name: pheme-redis
     command: redis-server --appendonly yes --appendfsync everysec
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -73,54 +74,57 @@ services:
   # ─── Email (dev only) ─────────────────────────────────────────────────────────
 
   mailpit:
-    image: axllent/mailpit:latest
+    image: axllent/mailpit:v1.22.3
     container_name: pheme-mailpit
+    profiles: ["dev"]
     ports:
-      - "1025:1025"   # SMTP — for sending emails
-      - "8025:8025"   # Web UI 
+      - "127.0.0.1:1025:1025"   # SMTP — for sending emails
+      - "127.0.0.1:8025:8025"   # Web UI
 
   # ─── Observability ────────────────────────────────────────────────────────────
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.55.1
     container_name: pheme-prometheus
+    profiles: ["observability"]
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.4.0
     container_name: pheme-grafana
+    profiles: ["observability"]
     depends_on:
       - prometheus
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
     volumes:
       - grafana_data:/var/lib/grafana
 
-  # ─── Application (when Dockerfile is ready) ───────────────
+  # ─── Application ────────────────────────────────────────────
 
-  # pheme-notify:
-  #   build: .
-  #   container_name: pheme-notify
-  #   depends_on:
-  #     kafka:
-  #       condition: service_healthy
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-  #   env_file: .env
-  #   environment:
-  #     SPRING_PROFILES_ACTIVE: docker
-  #   ports:
-  #     - "8080:8080"
+  pheme-notify:
+    build: .
+    container_name: pheme-notify
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "127.0.0.1:8080:8080"
 
 # ─── Volumes ──────────────────────────────────────────────────────────────────
 
