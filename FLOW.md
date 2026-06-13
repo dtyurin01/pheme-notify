@@ -1,10 +1,10 @@
 # Pheme Notify — Application Flow
 
-> Подробное описание того, как обрабатывается уведомление: от входящего Kafka-события до записи в базу данных.
+> Detailed description of notification processing: from incoming Kafka event to database record.
 
 ---
 
-## Общая схема
+## Overview
 
 ```
 Kafka event
@@ -16,46 +16,46 @@ NotificationEventConsumer       ← @RetryableTopic (3x, backoff 5s/10s/20s)
 NotificationOrchestrator
     │
     ├─► RedisDeduplicationAdapter   → Redis SETNX "dedup:{id}" TTL=24h
-    │       дубликат? → STOP
+    │       duplicate? → STOP
     │
-    ├─► UserPreferenceRepository    → PostgreSQL: какие каналы включены
-    │       нет настроек? → STOP
+    ├─► UserPreferenceRepository    → PostgreSQL: which channels are enabled
+    │       no preferences? → STOP
     │
-    └─► для каждого канала (partial failure — каналы независимы):
+    └─► for each channel (partial failure — channels are independent):
             │
             ├─► NotificationRepository.save(PENDING)
             ├─► RedisRateLimitAdapter        → Lua sliding window
-            │       превышен? → FAILED, следующий канал
+            │       exceeded? → FAILED, next channel
             ├─► TemplateService              → Thymeleaf render
             ├─► ProviderRegistry.getProvider(channel)
             │       EmailProvider            → Circuit Breaker → JavaMailSender → Mailpit
-            │       SmsProvider / PushProvider → мок (лог)
+            │       SmsProvider / PushProvider → mock (log)
             ├─► NotificationMetrics           → sent/failed counters + send duration timer
             └─► NotificationRepository.save(DELIVERED / FAILED)
 
-если все retry провалились:
+if all retries failed:
     DLT → handleDlt() → failed_notifications (JSONB)
               ▲
-              │ каждые N секунд
+              │ every N seconds
     FailedNotificationRetryScheduler → processRetry()
 ```
 
 ---
 
-## Шаг 1 — Входящее Kafka-событие
+## Step 1 — Incoming Kafka event
 
-**Файл:** `src/main/java/com/pheme/phemenotify/messaging/consumer/NotificationEventConsumer.java`
+**File:** `src/main/java/com/pheme/phemenotify/messaging/consumer/NotificationEventConsumer.java`
 
-Kafka-топик `notification.events` принимает события трёх типов:
+Kafka topic `notification.events` accepts three event types:
 - `order.completed`
 - `user.registered`
 - `payment.failed`
 
-Каждое событие десериализуется в `NotificationEvent` record:
+Each event is deserialized into a `NotificationEvent` record:
 
 ```java
 public record NotificationEvent(
-    String id,           // UUID — ключ дедупликации
+    String id,           // UUID — deduplication key
     String userId,
     EventType eventType,
     Channel channel,
@@ -64,191 +64,191 @@ public record NotificationEvent(
 ) {}
 ```
 
-`@RetryableTopic` автоматически создаёт retry-топики и настраивает экспоненциальный backoff:
+`@RetryableTopic` automatically creates retry topics and configures exponential backoff:
 
-| Попытка | Топик | Задержка |
-|---------|-------|----------|
+| Attempt | Topic | Delay |
+|---------|-------|-------|
 | 1 | `notification.events` | — |
-| 2 | `notification.events-retry-0` | 5 сек |
-| 3 | `notification.events-retry-1` | 10 сек |
-| DLT | `notification.events.dlt` | после 3-й неудачи |
+| 2 | `notification.events-retry-0` | 5 sec |
+| 3 | `notification.events-retry-1` | 10 sec |
+| DLT | `notification.events.dlt` | after 3rd failure |
 
 ---
 
-## Шаг 2 — Оркестратор запускает pipeline
+## Step 2 — Orchestrator runs the pipeline
 
-**Файл:** `src/main/java/com/pheme/phemenotify/service/NotificationOrchestrator.java`
+**File:** `src/main/java/com/pheme/phemenotify/service/NotificationOrchestrator.java`
 
-Центральный сервис. Получает событие от consumer и последовательно вызывает все шаги.
-Реализует паттерн **Partial Failure**: каналы обрабатываются в отдельных `try/catch` блоках.
-Ошибка в EMAIL не останавливает SMS.
+Central service. Receives the event from the consumer and sequentially calls all steps.
+Implements the **Partial Failure** pattern: channels are processed in separate `try/catch` blocks.
+An error in EMAIL does not stop SMS.
 
 ---
 
-## Шаг 3 — Дедупликация (Hard #1)
+## Step 3 — Deduplication (Hard #1)
 
-**Файл:** `src/main/java/com/pheme/phemenotify/infrastructure/redis/RedisDeduplicationAdapter.java`
+**File:** `src/main/java/com/pheme/phemenotify/infrastructure/redis/RedisDeduplicationAdapter.java`
 
-Redis-команда `SETNX` атомарно записывает ключ только если его нет:
+Redis command `SETNX` atomically writes a key only if it doesn't exist:
 
 ```
 SETNX dedup:{eventId} "1" EX 86400
 ```
 
-| Результат SETNX | Значение | Действие |
+| SETNX result | Meaning | Action |
 |----------------|----------|----------|
-| `true` | ключ не существовал → событие новое | продолжаем |
-| `false` | ключ уже был → дубликат | пропускаем |
+| `true` | key didn't exist → new event | continue |
+| `false` | key already existed → duplicate | skip |
 
-TTL = 24 часа. Если Kafka доставит одно событие дважды (at-least-once гарантия Kafka),
-второй раз оно будет проигнорировано. Это обеспечивает **effectively exactly-once** семантику.
+TTL = 24 hours. If Kafka delivers the same event twice (at-least-once guarantee),
+the second occurrence is ignored. This provides **effectively exactly-once** semantics.
 
 ---
 
-## Шаг 4 — Загрузка настроек пользователя
+## Step 4 — Loading user preferences
 
-**Файл:** `src/main/java/com/pheme/phemenotify/persistence/repository/UserPreferenceRepository.java`
+**File:** `src/main/java/com/pheme/phemenotify/persistence/repository/UserPreferenceRepository.java`
 
 ```sql
 SELECT * FROM user_preferences WHERE user_id = :userId
 ```
 
-Возвращает `UserPreferences` — список включённых каналов: например `[EMAIL, SMS]`.
+Returns `UserPreferences` — list of enabled channels, e.g. `[EMAIL, SMS]`.
 
-- Настроек нет → `log.warn` → обработка останавливается
-- Все каналы отключены → `log.warn` → обработка останавливается
-
----
-
-## Шаг 5 — Обработка каждого канала
-
-**Файл:** `src/main/java/com/pheme/phemenotify/service/NotificationOrchestrator.java` — метод `processChannel()`
-
-Для каждого канала из `UserPreferences.enabledChannels` выполняются шаги 5а–5д.
-Если канал завершился ошибкой — переходим к следующему каналу, не бросаем exception наверх.
+- No preferences found → `log.warn` → processing stops
+- All channels disabled → `log.warn` → processing stops
 
 ---
 
-### Шаг 5а — Сохранение записи PENDING
+## Step 5 — Processing each channel
 
-**Файл:** `src/main/java/com/pheme/phemenotify/persistence/repository/NotificationRepository.java`
+**File:** `src/main/java/com/pheme/phemenotify/service/NotificationOrchestrator.java` — method `processChannel()`
 
-До отправки сохраняем запись в таблицу `notifications` со статусом `PENDING`.
-
-Ключ идемпотентности: `{eventId}:{channel}` — уникальный `UNIQUE` constraint в БД.
-Если запись уже существует (`DataIntegrityViolationException`) → дубликат, пропускаем канал.
-Это страхует от race condition при параллельных retry от Kafka.
+For each channel in `UserPreferences.enabledChannels`, steps 5a–5e are executed.
+If a channel fails, move on to the next channel — no exception propagates upward.
 
 ---
 
-### Шаг 5б — Rate Limit (Hard #2)
+### Step 5a — Save PENDING record
 
-**Файлы:**
+**File:** `src/main/java/com/pheme/phemenotify/persistence/repository/NotificationRepository.java`
+
+Before sending, save a record in the `notifications` table with status `PENDING`.
+
+Idempotency key: `{eventId}:{channel}` — `UNIQUE` constraint in the DB.
+If the record already exists (`DataIntegrityViolationException`) → duplicate, skip the channel.
+This guards against race conditions during parallel Kafka retries.
+
+---
+
+### Step 5b — Rate Limit (Hard #2)
+
+**Files:**
 - `src/main/java/com/pheme/phemenotify/service/RateLimitService.java`
 - `src/main/java/com/pheme/phemenotify/infrastructure/redis/RedisRateLimitAdapter.java`
 - `src/main/resources/redis/rate_limit.lua`
 
-`RedisRateLimitAdapter` выполняет Lua-скрипт **атомарно** через `redisTemplate.execute()`.
-Ключ в Redis: `ratelimit:{userId}:{channel}`.
+`RedisRateLimitAdapter` runs the Lua script **atomically** via `redisTemplate.execute()`.
+Redis key: `ratelimit:{userId}:{channel}`.
 
-Lua-скрипт выполняет 4 операции в одной транзакции:
+The Lua script performs 4 operations in one transaction:
 
 ```lua
-redis.call('ZREMRANGEBYSCORE', key, 0, now - window)  -- удалить старые записи
-local count = redis.call('ZCARD', key)                 -- посчитать за окно
-if count >= max_requests then return 1 end             -- заблокировать
-redis.call('ZADD', key, now, now .. ':' .. random)     -- добавить текущий
-redis.call('PEXPIRE', key, window)                     -- обновить TTL
-return 0                                               -- разрешить
+redis.call('ZREMRANGEBYSCORE', key, 0, now - window)  -- remove old entries
+local count = redis.call('ZCARD', key)                 -- count within window
+if count >= max_requests then return 1 end             -- block
+redis.call('ZADD', key, now, now .. ':' .. random)     -- add current
+redis.call('PEXPIRE', key, window)                     -- refresh TTL
+return 0                                               -- allow
 ```
 
-Лимиты по каналам:
+Limits per channel:
 
-| Канал | Лимит | Окно |
+| Channel | Limit | Window |
 |-------|-------|------|
-| EMAIL | 5 | 1 час |
-| SMS | 3 | 1 час |
-| PUSH | 20 | 1 час |
+| EMAIL | 5 | 1 hour |
+| SMS | 3 | 1 hour |
+| PUSH | 20 | 1 hour |
 
-Почему Lua, а не Java? Несколько Redis-команд из Java создают race condition:
-между `ZCARD` и `ZADD` другой поток может вклиниться и нарушить счётчик.
+Why Lua and not Java? Multiple Redis commands from Java create a race condition:
+another thread could interleave between `ZCARD` and `ZADD` and corrupt the counter.
 
-При превышении: `status = FAILED`, `errorMessage = "RATE_LIMIT_EXCEEDED"`, переходим к следующему каналу.
+On exceeding the limit: `status = FAILED`, `errorMessage = "RATE_LIMIT_EXCEEDED"`, move to the next channel.
 
 ---
 
-### Шаг 5в — Рендеринг шаблона
+### Step 5c — Template rendering
 
-**Файл:** `src/main/java/com/pheme/phemenotify/service/TemplateService.java`
+**File:** `src/main/java/com/pheme/phemenotify/service/TemplateService.java`
 
-Thymeleaf рендерит шаблон по пути `templates/{channel}/{eventType}`.
+Thymeleaf renders the template at path `templates/{channel}/{eventType}`.
 
-Путь = `templates/{channel}/{event-type-code-kebab-case}.{ext}` (`.html` для EMAIL, `.txt` для SMS/PUSH).
+Path = `templates/{channel}/{event-type-code-kebab-case}.{ext}` (`.html` for EMAIL, `.txt` for SMS/PUSH).
 
-Примеры:
+Examples:
 - `templates/email/order-completed.html`
 - `templates/sms/user-registered.txt`
 - `templates/push/payment-failed.txt`
 
-Все 3 типа событий (`order.completed`, `user.registered`, `payment.failed`) имеют шаблоны для всех 3 каналов (email/sms/push).
+All 3 event types (`order.completed`, `user.registered`, `payment.failed`) have templates for all 3 channels (email/sms/push).
 
-В шаблон передаётся `payload` из события — там могут быть имя пользователя,
-сумма заказа, код верификации и т.д.
+The event's `payload` is passed to the template — it may contain the user's name,
+order total, verification code, etc.
 
 ---
 
-### Шаг 5г — Отправка через провайдер
+### Step 5d — Sending via provider
 
-**Файлы:**
+**Files:**
 - `src/main/java/com/pheme/phemenotify/provider/ProviderRegistry.java`
 - `src/main/java/com/pheme/phemenotify/provider/EmailProvider.java`
 - `src/main/java/com/pheme/phemenotify/provider/SmsProvider.java`
 - `src/main/java/com/pheme/phemenotify/provider/PushProvider.java`
 
-`ProviderRegistry` — это `Map<Channel, NotificationProvider>`. Паттерн **Strategy**:
-по каналу достаём нужную реализацию.
+`ProviderRegistry` is a `Map<Channel, NotificationProvider>`. **Strategy** pattern:
+look up the implementation by channel.
 
-**EmailProvider** оборачивает отправку в **Circuit Breaker** (Resilience4j):
+**EmailProvider** wraps sending in a **Circuit Breaker** (Resilience4j):
 
-| Состояние CB | Что происходит |
+| CB state | What happens |
 |-------------|---------------|
-| `CLOSED` | письма идут через `JavaMailSender` → Mailpit (dev) |
-| `OPEN` | вызовы сразу падают без попытки подключиться к SMTP |
-| `HALF_OPEN` | после таймаута пропускает один тестовый запрос |
+| `CLOSED` | emails go through `JavaMailSender` → Mailpit (dev) |
+| `OPEN` | calls fail immediately without attempting SMTP connection |
+| `HALF_OPEN` | after timeout, allows one test request through |
 
-CB переходит в `OPEN` после N ошибок подряд — защищает от шторма запросов
-к недоступному SMTP-серверу.
+CB transitions to `OPEN` after N consecutive failures — protects against a
+request storm to an unavailable SMTP server.
 
-**SmsProvider** и **PushProvider** — моки: логируют отправленное сообщение, без реальной интеграции.
-
----
-
-### Шаг 5д — Обновление статуса в БД
-
-**Файл:** `src/main/java/com/pheme/phemenotify/persistence/repository/NotificationRepository.java`
-
-| Результат | Статус | Поля |
-|-----------|--------|------|
-| Успех | `DELIVERED` | `sent_at = now()` |
-| Ошибка | `FAILED` | `error_message = "SEND_FAILED:RuntimeException"` |
-
-В `error_message` — нормализованный код, не `e.getMessage()`.
-Детали исключения — только в логах (SLF4J автоматически пишет stacktrace).
-
-**Метрики (Micrometer, `NotificationMetrics`):**
-- `notifications.sent{channel}` — counter, инкремент при DELIVERED
-- `notifications.failed{channel}` — counter, инкремент при FAILED (на шаге отправки)
-- `notification.send.duration{channel}` — timer (с percentile histogram) вокруг рендеринга шаблона + вызова провайдера, через `Timer.Sample` в `try/finally`
+**SmsProvider** and **PushProvider** are mocks: they log the sent message, with no real integration.
 
 ---
 
-## Шаг 6 — DLT: Dead Letter Topic
+### Step 5e — Updating status in DB
 
-**Файл:** `src/main/java/com/pheme/phemenotify/messaging/consumer/NotificationEventConsumer.java` — метод `handleDlt()`
+**File:** `src/main/java/com/pheme/phemenotify/persistence/repository/NotificationRepository.java`
 
-Если все 3 retry исчерпаны, Spring Kafka автоматически направляет сообщение
-в `notification.events.dlt`. Метод `@DltHandler` получает событие и сохраняет
-его в таблицу `failed_notifications` с полным `event_payload` в JSONB:
+| Result | Status | Fields |
+|-----------|--------|--------|
+| Success | `DELIVERED` | `sent_at = now()` |
+| Error | `FAILED` | `error_message = "SEND_FAILED:RuntimeException"` |
+
+`error_message` holds a normalized code, not `e.getMessage()`.
+Exception details go only to logs (SLF4J automatically logs the stacktrace).
+
+**Metrics (Micrometer, `NotificationMetrics`):**
+- `notifications.sent{channel}` — counter, incremented on DELIVERED
+- `notifications.failed{channel}` — counter, incremented on FAILED (at send step)
+- `notification.send.duration{channel}` — timer (with percentile histogram) around template rendering + provider call, via `Timer.Sample` in `try/finally`
+
+---
+
+## Step 6 — DLT: Dead Letter Topic
+
+**File:** `src/main/java/com/pheme/phemenotify/messaging/consumer/NotificationEventConsumer.java` — method `handleDlt()`
+
+If all 3 retries are exhausted, Spring Kafka automatically routes the message
+to `notification.events.dlt`. The `@DltHandler` method receives the event and saves
+it to the `failed_notifications` table with the full `event_payload` in JSONB:
 
 ```json
 {
@@ -261,37 +261,37 @@ CB переходит в `OPEN` после N ошибок подряд — за�
 }
 ```
 
-JSONB позволяет полностью восстановить событие для повторной попытки.
+JSONB allows the event to be fully reconstructed for a retry.
 
 ---
 
-## Шаг 7 — Scheduled Retry
+## Step 7 — Scheduled Retry
 
-**Файл:** `src/main/java/com/pheme/phemenotify/messaging/retry/FailedNotificationRetryScheduler.java`
+**File:** `src/main/java/com/pheme/phemenotify/messaging/retry/FailedNotificationRetryScheduler.java`
 
-`@Scheduled` запускается каждые N секунд (настраивается через `RetrySchedulerProperties`).
-Запрашивает из `failed_notifications` записи где `status = PENDING` и `next_retry_at < now()`.
+`@Scheduled` runs every N seconds (configurable via `RetrySchedulerProperties`).
+Queries `failed_notifications` for records where `status = PENDING` and `next_retry_at < now()`.
 
-Экспоненциальный backoff:
+Exponential backoff:
 
-| Попытка | Следующая попытка через |
+| Attempt | Next retry after |
 |---------|------------------------|
-| 1 | базовый интервал (например 1 мин) |
+| 1 | base interval (e.g. 1 min) |
 | 2 | ×2 |
 | 3 | ×4 |
-| N >= maxAttempts | статус `FAILED` навсегда |
+| N >= maxAttempts | status permanently `FAILED` |
 
-Восстанавливает `NotificationEvent` из JSONB и вызывает
-`NotificationOrchestrator.processRetry()` — тот же pipeline, но **без дедупликации**
-(это уже не новое событие, dedup-шаг пропускается).
+Reconstructs the `NotificationEvent` from JSONB and calls
+`NotificationOrchestrator.processRetry()` — the same pipeline, but **without deduplication**
+(this isn't a new event, the dedup step is skipped).
 
 ---
 
-## Параллельные флоу — REST API
+## Parallel flows — REST API
 
 ### Analytics API (Hard #3)
 
-**Файлы:**
+**Files:**
 - `src/main/java/com/pheme/phemenotify/api/controller/AnalyticsController.java`
 - `src/main/java/com/pheme/phemenotify/service/AnalyticsService.java`
 - `src/main/java/com/pheme/phemenotify/persistence/repository/NotificationRepository.java`
@@ -302,24 +302,24 @@ GET /api/v1/analytics/delivery-stats?startDate=2026-05-01&endDate=2026-05-30
     ▼
 AnalyticsService
     │
-    ├─► Redis cache (@Cacheable, ключ: "startDate:endDate", TTL=1h)
-    │       cache hit  → вернуть сразу
-    │       cache miss → выполнить SQL
+    ├─► Redis cache (@Cacheable, key: "startDate:endDate", TTL=1h)
+    │       cache hit  → return immediately
+    │       cache miss → run SQL
     │
     └─► NotificationRepository.findDeliveryStats()
-            нативный SQL:
-            - DATE_TRUNC('day', created_at) — группировка по дням
-            - COUNT(*) FILTER (WHERE status = 'DELIVERED') — статистика
+            native SQL:
+            - DATE_TRUNC('day', created_at) — group by day
+            - COUNT(*) FILTER (WHERE status = 'DELIVERED') — stats
             - AVG(delivery_rate) OVER (PARTITION BY channel, event_type
               ORDER BY day ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)
-              — скользящее 7-дневное среднее
+              — 7-day rolling average
 ```
 
 ### Preferences API
 
 ```
 GET  /api/v1/users/{id}/preferences  → PreferenceController → PreferenceService → UserPreferenceRepository
-PUT  /api/v1/users/{id}/preferences  → валидация → сохранить enabledChannels
+PUT  /api/v1/users/{id}/preferences  → validation → save enabledChannels
 ```
 
 ### Notification Status API
@@ -330,11 +330,11 @@ GET /api/v1/notifications/{id}/status → NotificationController → Notificatio
 
 ---
 
-## Обработка ошибок
+## Error handling
 
-**Файл:** `src/main/java/com/pheme/phemenotify/api/exception/GlobalExceptionHandler.java`
+**File:** `src/main/java/com/pheme/phemenotify/api/exception/GlobalExceptionHandler.java`
 
-Все HTTP-ошибки возвращаются в формате **Problem Detail (RFC 9457)**:
+All HTTP errors are returned in **Problem Detail (RFC 9457)** format:
 
 ```json
 {
@@ -345,22 +345,22 @@ GET /api/v1/notifications/{id}/status → NotificationController → Notificatio
 }
 ```
 
-Stacktrace клиенту **никогда не возвращается**. Неожиданные ошибки логируются с UUID:
-`log.error("Unexpected error [id={}]", errorId, exception)` — по UUID можно найти
-в логах полный stacktrace.
+Stacktrace is **never** returned to the client. Unexpected errors are logged with a UUID:
+`log.error("Unexpected error [id={}]", errorId, exception)` — the UUID can be used to find
+the full stacktrace in the logs.
 
 ---
 
-## Конфигурация инфраструктуры
+## Infrastructure configuration
 
-| Сервис | Порт | Назначение |
+| Service | Port | Purpose |
 |--------|------|-----------|
 | App | 8080 | REST API + Actuator |
-| Kafka | 9092 | Входящие события |
-| Kafka UI | 8090 | Мониторинг топиков и сообщений |
-| PostgreSQL | 55200 | Хранение notifications, preferences |
+| Kafka | 9092 | Incoming events |
+| Kafka UI | 8090 | Topic/message monitoring |
+| PostgreSQL | 55200 | Stores notifications, preferences |
 | Redis | 6379 | Dedup, Rate Limit, Analytics cache |
-| Mailpit SMTP | 1025 | Перехват email в dev |
-| Mailpit UI | 8025 | Просмотр отправленных писем |
-| Prometheus | 9090 | Сбор метрик |
-| Grafana | 3000 | Дашборды: sent/failed/duration/CB state |
+| Mailpit SMTP | 1025 | Email interception in dev |
+| Mailpit UI | 8025 | View sent emails |
+| Prometheus | 9090 | Metrics collection |
+| Grafana | 3000 | Dashboards: sent/failed/duration/CB state |

@@ -1,12 +1,10 @@
 <p align="center">
-  <img src="docs/logo.png" alt="Pheme Notify logo" width="180" style="margin-right: 50px;"/>
+  <img src="docs/logo.png" alt="Pheme Notify logo" width="180" style="margin-right: 47px;"/>
 </p>
 
 <h1 align="center">Pheme Notify</h1>
 
-Production-grade multi-channel notification microservice. Consumes events from Kafka,
-deduplicates and rate-limits via Redis, renders templates (Thymeleaf), and delivers
-via Email/SMS/Push — with full observability (Prometheus/Grafana) and analytics (PostgreSQL window functions).
+Early-stage multi-channel notification microservice (work in progress). Pulls events from Kafka, dedupes and rate-limits with Redis, renders templates with Thymeleaf, and sends via Email/SMS/Push. Also wiring up Prometheus/Grafana for monitoring and PostgreSQL window-function queries for analytics.
 
 ## Architecture
 
