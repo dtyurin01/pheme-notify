@@ -48,10 +48,12 @@ public class NotificationMetrics {
               .register(meterRegistry));
     }
     dltCounter = Counter.builder("notifications.dlt").register(meterRegistry);
-    duplicateSkippedCounter = Counter.builder("notifications.duplicate.skipped").register(meterRegistry);
+    duplicateSkippedCounter =
+        Counter.builder("notifications.duplicate.skipped").register(meterRegistry);
     retrySuccessCounter = Counter.builder("notifications.retry.success").register(meterRegistry);
     retryFailedCounter = Counter.builder("notifications.retry.failed").register(meterRegistry);
-    retryExhaustedCounter = Counter.builder("notifications.retry.exhausted").register(meterRegistry);
+    retryExhaustedCounter =
+        Counter.builder("notifications.retry.exhausted").register(meterRegistry);
   }
 
   public void incrementDlt() {

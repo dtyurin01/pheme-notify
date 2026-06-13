@@ -19,7 +19,9 @@ public class PreferenceController {
 
   private final PreferenceService preferenceService;
 
-  @Operation(summary = "Get user preferences", description = "Returns notification settings for given user")
+  @Operation(
+      summary = "Get user preferences",
+      description = "Returns notification settings for given user")
   @GetMapping("/{userId}/preferences")
   public ResponseEntity<PreferenceResponse> getPreferences(@PathVariable String userId) {
     return ResponseEntity.ok(preferenceService.getByUserId(userId));

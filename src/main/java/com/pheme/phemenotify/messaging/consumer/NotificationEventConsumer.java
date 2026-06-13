@@ -1,9 +1,9 @@
 package com.pheme.phemenotify.messaging.consumer;
 
+import com.pheme.phemenotify.infrastructure.metrics.NotificationMetrics;
 import com.pheme.phemenotify.messaging.event.NotificationEvent;
 import com.pheme.phemenotify.persistence.entity.EventTypeRegistry;
 import com.pheme.phemenotify.persistence.entity.FailedNotification;
-import com.pheme.phemenotify.infrastructure.metrics.NotificationMetrics;
 import com.pheme.phemenotify.persistence.repository.FailedNotificationRepository;
 import com.pheme.phemenotify.service.NotificationOrchestrator;
 import java.util.HashMap;

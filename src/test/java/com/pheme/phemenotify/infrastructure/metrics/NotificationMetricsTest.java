@@ -59,8 +59,7 @@ public class NotificationMetricsTest {
   void shouldIncrementDuplicateSkippedCounter_whenIncrementDuplicateSkippedCalled() {
     notificationMetrics.incrementDuplicateSkipped();
 
-    double count = 
-            registry.get("notifications.duplicate.skipped").counter().count();
+    double count = registry.get("notifications.duplicate.skipped").counter().count();
 
     assertThat(count).isEqualTo(1.0);
   }
@@ -70,7 +69,7 @@ public class NotificationMetricsTest {
     notificationMetrics.incrementRateLimitExceeded(Channel.SMS);
 
     double count =
-            registry.get("notifications.ratelimit.exceeded").tag("channel", "SMS").counter().count();
+        registry.get("notifications.ratelimit.exceeded").tag("channel", "SMS").counter().count();
 
     assertThat(count).isEqualTo(1.0);
   }

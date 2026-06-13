@@ -20,7 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class NotificationController {
   private final NotificationService notificationService;
 
-  @Operation(summary = "Get notification status", description = "Returns delivery status for given notification id")
+  @Operation(
+      summary = "Get notification status",
+      description = "Returns delivery status for given notification id")
   @GetMapping("/{id}/status")
   public ResponseEntity<NotificationResponse> getStatus(@PathVariable UUID id) {
     return ResponseEntity.ok(notificationService.getById(id));
