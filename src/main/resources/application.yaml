@@ -79,6 +79,9 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    kafka:
+      enabled: true
   prometheus:
     metrics:
       export:
