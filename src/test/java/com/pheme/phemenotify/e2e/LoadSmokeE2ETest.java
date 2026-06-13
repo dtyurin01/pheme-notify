@@ -52,7 +52,10 @@ public class LoadSmokeE2ETest extends BaseIntegrationTest {
         .atMost(2, TimeUnit.MINUTES)
         .untilAsserted(
             () -> {
-              var all = notificationRepository.findAll();
+              var all =
+                  notificationRepository.findAll().stream()
+                      .filter(n -> n.getIdempotencyKey().startsWith("load-"))
+                      .toList();
 
               assertThat(all).hasSize(EVENT_COUNT);
               assertThat(all).noneMatch(n -> n.getStatus() == NotificationStatus.PENDING);

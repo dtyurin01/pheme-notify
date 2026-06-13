@@ -2,6 +2,7 @@ package com.pheme.phemenotify.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.pheme.phemenotify.BaseIntegrationTest;
 import com.pheme.phemenotify.persistence.entity.Channel;
 import com.pheme.phemenotify.persistence.entity.eventtype.OrderCompletedEventType;
 import com.pheme.phemenotify.persistence.entity.eventtype.UserRegisteredEventType;
@@ -9,13 +10,9 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 @Slf4j
-@SpringBootTest
-@ActiveProfiles("test")
-public class TemplateServiceIntegrationTest {
+public class TemplateServiceIntegrationTest extends BaseIntegrationTest {
   @Autowired private TemplateService templateService;
 
   @Test
