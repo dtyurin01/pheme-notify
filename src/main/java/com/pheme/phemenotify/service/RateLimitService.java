@@ -2,6 +2,7 @@ package com.pheme.phemenotify.service;
 
 import com.pheme.phemenotify.api.exception.RateLimitExceededException;
 import com.pheme.phemenotify.config.RateLimitProperties;
+import com.pheme.phemenotify.infrastructure.metrics.NotificationMetrics;
 import com.pheme.phemenotify.infrastructure.redis.RedisRateLimitAdapter;
 import com.pheme.phemenotify.persistence.entity.Channel;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 public class RateLimitService {
   private final RedisRateLimitAdapter rateLimitAdapter;
   private final RateLimitProperties properties;
+  private final NotificationMetrics notificationMetrics;
 
   public void checkLimit(String userId, Channel channel) {
     RateLimitProperties.ChannelLimit limit = getLimit(channel);
@@ -21,6 +23,7 @@ public class RateLimitService {
             userId, channel.name(), limit.window().toMillis(), limit.maxRequests());
 
     if (!allowed) {
+      notificationMetrics.incrementRateLimitExceeded(channel);
       throw new RateLimitExceededException(
           "Rate limit exceeded for user "
               + userId

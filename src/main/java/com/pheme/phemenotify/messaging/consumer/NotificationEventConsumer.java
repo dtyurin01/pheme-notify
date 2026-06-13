@@ -3,6 +3,7 @@ package com.pheme.phemenotify.messaging.consumer;
 import com.pheme.phemenotify.messaging.event.NotificationEvent;
 import com.pheme.phemenotify.persistence.entity.EventTypeRegistry;
 import com.pheme.phemenotify.persistence.entity.FailedNotification;
+import com.pheme.phemenotify.infrastructure.metrics.NotificationMetrics;
 import com.pheme.phemenotify.persistence.repository.FailedNotificationRepository;
 import com.pheme.phemenotify.service.NotificationOrchestrator;
 import java.util.HashMap;
@@ -27,6 +28,7 @@ public class NotificationEventConsumer {
   private final NotificationOrchestrator orchestrator;
   private final FailedNotificationRepository failedNotificationRepository;
   private final EventTypeRegistry eventTypeRegistry;
+  private final NotificationMetrics notificationMetrics;
 
   @RetryableTopic(
       attempts = "3",
@@ -52,6 +54,7 @@ public class NotificationEventConsumer {
       @Header(KafkaHeaders.EXCEPTION_MESSAGE) String errorMessage) {
 
     log.error("Event failed after all retries: id:{}, topic={}", event.id(), topic);
+    notificationMetrics.incrementDlt();
 
     FailedNotification failed =
         FailedNotification.builder()

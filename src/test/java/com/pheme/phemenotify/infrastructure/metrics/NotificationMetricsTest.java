@@ -47,6 +47,46 @@ public class NotificationMetricsTest {
   }
 
   @Test
+  void shouldIncrementDltCounter_whenIncrementDltCalled() {
+    notificationMetrics.incrementDlt();
+
+    double count = registry.get("notifications.dlt").counter().count();
+
+    assertThat(count).isEqualTo(1.0);
+  }
+
+  @Test
+  void shouldIncrementDuplicateSkippedCounter_whenIncrementDuplicateSkippedCalled() {
+    notificationMetrics.incrementDuplicateSkipped();
+
+    double count = 
+            registry.get("notifications.duplicate.skipped").counter().count();
+
+    assertThat(count).isEqualTo(1.0);
+  }
+
+  @Test
+  void shouldIncrementRateLimitExceededCounter_whenIncrementRateLimitExceededCalled() {
+    notificationMetrics.incrementRateLimitExceeded(Channel.SMS);
+
+    double count =
+            registry.get("notifications.ratelimit.exceeded").tag("channel", "SMS").counter().count();
+
+    assertThat(count).isEqualTo(1.0);
+  }
+
+  @Test
+  void shouldIncrementRetryCounters_whenRetryMethodsCalled() {
+    notificationMetrics.incrementRetrySuccess();
+    notificationMetrics.incrementRetryFailed();
+    notificationMetrics.incrementRetryExhausted();
+
+    assertThat(registry.get("notifications.retry.success").counter().count()).isEqualTo(1.0);
+    assertThat(registry.get("notifications.retry.failed").counter().count()).isEqualTo(1.0);
+    assertThat(registry.get("notifications.retry.exhausted").counter().count()).isEqualTo(1.0);
+  }
+
+  @Test
   void shouldRecordSendDuration_whenRecordSendDurationCalled() {
     Timer.Sample sample = notificationMetrics.sendTimer();
 

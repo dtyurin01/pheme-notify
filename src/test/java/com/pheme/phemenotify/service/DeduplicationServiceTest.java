@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.pheme.phemenotify.infrastructure.metrics.NotificationMetrics;
 import com.pheme.phemenotify.infrastructure.redis.RedisDeduplicationAdapter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +16,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class DeduplicationServiceTest {
 
   @Mock private RedisDeduplicationAdapter deduplicationAdapter;
+
+  @Mock private NotificationMetrics notificationMetrics;
 
   @InjectMocks private DeduplicationService deduplicationService;
 
@@ -35,5 +38,6 @@ class DeduplicationServiceTest {
     boolean result = deduplicationService.isNew("event-123");
 
     assertThat(result).isFalse();
+    verify(notificationMetrics).incrementDuplicateSkipped();
   }
 }

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 
 import com.pheme.phemenotify.api.exception.RateLimitExceededException;
 import com.pheme.phemenotify.config.RateLimitProperties;
+import com.pheme.phemenotify.infrastructure.metrics.NotificationMetrics;
 import com.pheme.phemenotify.infrastructure.redis.RedisRateLimitAdapter;
 import com.pheme.phemenotify.persistence.entity.Channel;
 import java.time.Duration;
@@ -23,6 +24,8 @@ public class RateLimitServiceTest {
   @Mock private RedisRateLimitAdapter rateLimitAdapter;
 
   @Mock private RateLimitProperties properties;
+
+  @Mock private NotificationMetrics notificationMetrics;
 
   @InjectMocks private RateLimitService rateLimitService;
 
@@ -55,6 +58,8 @@ public class RateLimitServiceTest {
     assertThatThrownBy(() -> rateLimitService.checkLimit("user-1", Channel.EMAIL))
         .isInstanceOf(RateLimitExceededException.class)
         .hasMessageContaining("user-1");
+
+    verify(notificationMetrics).incrementRateLimitExceeded(Channel.EMAIL);
   }
 
   @Test

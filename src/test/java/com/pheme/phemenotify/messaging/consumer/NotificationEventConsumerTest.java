@@ -7,6 +7,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.pheme.phemenotify.infrastructure.metrics.NotificationMetrics;
 import com.pheme.phemenotify.messaging.event.NotificationEvent;
 import com.pheme.phemenotify.persistence.entity.EventTypeRegistry;
 import com.pheme.phemenotify.persistence.entity.FailedNotification;
@@ -32,6 +33,8 @@ public class NotificationEventConsumerTest {
   @Mock FailedNotificationRepository failedNotificationRepository;
 
   @Mock EventTypeRegistry eventTypeRegistry;
+
+  @Mock NotificationMetrics notificationMetrics;
 
   @InjectMocks NotificationEventConsumer notificationEventConsumer;
 
@@ -119,6 +122,18 @@ public class NotificationEventConsumerTest {
         .isEqualTo(notificationEvent.eventType());
 
     assertThat(failedNotification.getErrorMessage()).isEqualTo("timeout after 3 retries");
+  }
+
+  @Test
+  void shouldIncrementDltMetric_whenDltHandlerCalled() {
+    NotificationEvent notificationEvent = NotificationTestData.defaultEvent();
+    when(eventTypeRegistry.findByCode(OrderCompletedEventType.CODE))
+        .thenReturn(Optional.of(new OrderCompletedEventType()));
+
+    notificationEventConsumer.handleDlt(
+        notificationEvent, "notification.events.dlt", "timeout after 3 retries");
+
+    verify(notificationMetrics).incrementDlt();
   }
 
   @Test

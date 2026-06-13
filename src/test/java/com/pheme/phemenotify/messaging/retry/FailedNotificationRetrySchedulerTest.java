@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.pheme.phemenotify.config.RetrySchedulerProperties;
+import com.pheme.phemenotify.infrastructure.metrics.NotificationMetrics;
 import com.pheme.phemenotify.persistence.entity.FailedNotification;
 import com.pheme.phemenotify.persistence.entity.NotificationStatus;
 import com.pheme.phemenotify.persistence.repository.FailedNotificationRepository;
@@ -30,6 +31,8 @@ class FailedNotificationRetrySchedulerTest {
   @InjectMocks private FailedNotificationRetryScheduler scheduler;
 
   @Mock private RetrySchedulerProperties properties;
+
+  @Mock private NotificationMetrics notificationMetrics;
 
   @Test
   void shouldDoNothing_whenNoPendingNotifications() {
@@ -57,6 +60,7 @@ class FailedNotificationRetrySchedulerTest {
     FailedNotification saved = captor.getValue();
     assertThat(saved.getStatus()).isEqualTo(NotificationStatus.DELIVERED);
     assertThat(saved.getLastRetryAt()).isNotNull();
+    verify(notificationMetrics).incrementRetrySuccess();
   }
 
   @Test
@@ -77,6 +81,7 @@ class FailedNotificationRetrySchedulerTest {
     assertThat(saved.getRetryCount()).isEqualTo(1);
     assertThat(saved.getStatus()).isEqualTo(NotificationStatus.PENDING);
     assertThat(saved.getNextRetryAt()).isAfter(Instant.now());
+    verify(notificationMetrics).incrementRetryFailed();
   }
 
   @Test
@@ -93,5 +98,6 @@ class FailedNotificationRetrySchedulerTest {
     verify(failedNotificationRepository).save(captor.capture());
 
     assertThat(captor.getValue().getStatus()).isEqualTo(NotificationStatus.FAILED);
+    verify(notificationMetrics).incrementRetryExhausted();
   }
 }
