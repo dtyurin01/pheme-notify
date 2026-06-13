@@ -18,6 +18,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.cache.CacheManager;
 import org.springframework.test.web.servlet.MockMvc;
 
 @AutoConfigureMockMvc
@@ -29,32 +30,37 @@ public class AnalyticsE2ETest extends BaseIntegrationTest {
 
   @Autowired OrderCompletedEventType orderCompleted;
 
+  @Autowired CacheManager cacheManager;
+
   @AfterEach
   void cleanup() {
     notificationRepository.deleteAll();
+    var cache = cacheManager.getCache("deliveryStats");
+    if (cache != null) cache.clear();
   }
 
   @Test
   void shouldReturnDeliveryStats_whenNotificationsExist() throws Exception {
     // given — 2 DELIVERED, 1 FAILED yesterday
+    var yesterday = daysAgo(1);
     saveWithDate(
         notificationRepository,
         orderCompleted,
-        daysAgo(1),
+        yesterday,
         Channel.EMAIL,
         NotificationStatus.DELIVERED,
         "key-1");
     saveWithDate(
         notificationRepository,
         orderCompleted,
-        daysAgo(1),
+        yesterday,
         Channel.EMAIL,
         NotificationStatus.DELIVERED,
         "key-2");
     saveWithDate(
         notificationRepository,
         orderCompleted,
-        daysAgo(1),
+        yesterday,
         Channel.EMAIL,
         NotificationStatus.FAILED,
         "key-3");

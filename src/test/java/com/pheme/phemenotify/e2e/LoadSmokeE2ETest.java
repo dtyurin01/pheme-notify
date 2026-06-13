@@ -14,6 +14,7 @@ import com.pheme.phemenotify.util.PreferenceTestData;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -29,6 +30,11 @@ public class LoadSmokeE2ETest extends BaseIntegrationTest {
   @Autowired KafkaTemplate<String, NotificationEvent> kafkaTemplate;
 
   @Autowired NotificationRepository notificationRepository;
+
+  @AfterEach
+  void cleanup() {
+    notificationRepository.deleteAll();
+  }
 
   @Test
   void shouldProcessAllEvents_withoutLoss_whenBurstOf1000Sent() {
