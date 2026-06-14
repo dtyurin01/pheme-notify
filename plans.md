@@ -127,3 +127,76 @@ No Kafka dependency
 4. Configure read-only datasource pointing to same PostgreSQL
 5. Update pheme-ui to call pheme-analytics instead of pheme-notify for stats
 6. Add pheme-analytics to `docker-compose.yml` (port 8082)
+
+---
+
+## Service-to-service auth (OAuth2 client_credentials)
+
+### Problem
+
+`PreferenceController` and `NotificationController` are fully open — any caller
+can read/overwrite preferences for any `userId`. Pheme-notify doesn't own user
+identity (see CONCERNS.md), so per-user authz is out of scope. What's needed is
+**service-to-service authentication**: only trusted backends (e.g. shop-backend)
+may call this API at all. Authorization for a specific `userId` remains the
+calling service's responsibility.
+
+### Target flow
+
+```
+shop-backend --(client_credentials: client_id+secret)--> Auth Server (Keycloak)
+shop-backend --(Authorization: Bearer <access_token>)--> pheme-notify
+pheme-notify --(validate token via JWKS)--> Auth Server
+```
+
+pheme-notify becomes an OAuth2 **resource server** only — it never issues
+tokens, only validates them.
+
+### Resources needed
+
+- **Auth Server**: Keycloak (self-hosted, Docker container) — realistic for a
+  portfolio, free, runs locally via `docker-compose`. Alternative: Auth0 (managed,
+  but adds external dependency/account requirement — Keycloak preferred for
+  local dev parity).
+- New dependency: `spring-boot-starter-oauth2-resource-server`
+- Keycloak realm config: one `confidential` client per consuming backend
+  (e.g. `shop-backend`), client_id + client_secret stored in `.env`
+- `docker-compose.yml`: new `keycloak` service (port 8180), Postgres schema or
+  separate DB for Keycloak's own state
+
+### Sprint breakdown
+
+**Sprint A — Keycloak infra**
+1. Add `keycloak` service to `docker-compose.yml` (dev profile), with its own
+   Postgres DB or `dev-mem` for local-only use
+2. Create realm `pheme`, create client `shop-backend` (confidential,
+   `client_credentials` grant only)
+3. Document how to obtain a token manually (curl against
+   `/realms/pheme/protocol/openid-connect/token`) — add to README
+4. Add `KEYCLOAK_ISSUER_URI`, client id/secret to `.env.example`
+
+**Sprint B — Resource server wiring**
+5. Add `spring-boot-starter-oauth2-resource-server` to `pom.xml`
+6. `SecurityConfig` — `@EnableWebSecurity`, configure
+   `oauth2ResourceServer().jwt()` with `issuer-uri` from Keycloak
+7. Permit `/actuator/health`, `/swagger-ui/**`, `/v3/api-docs/**` without auth;
+   require valid JWT for `/api/v1/**`
+8. Update `GlobalExceptionHandler` if needed for 401/403 ProblemDetail shape
+   (Spring Security default may not match RFC 9457 — verify and add handler)
+
+**Sprint C — Tests + docs**
+9. Integration tests: `@WebMvcTest` with `@WithMockUser`/mocked JWT for 200 path;
+   no-token / invalid-token → 401 ProblemDetail
+10. Update README "Event contract / Integration" section: how shop-backend
+    fetches a token and calls the API with `Authorization: Bearer`
+11. Update CONCERNS.md — mark "No authentication" as resolved, link to this
+    section
+
+### Open questions / not in scope
+
+- Per-`userId` authorization (does this client own this userId?) — explicitly
+  NOT handled here; remains caller's responsibility per the trust model above
+- Token caching/refresh on the client side — document as client's concern,
+  not pheme-notify's
+- mTLS — alternative considered, dropped in favor of OAuth2 as more standard
+  and easier to demo/test locally

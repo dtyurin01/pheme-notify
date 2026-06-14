@@ -12,17 +12,19 @@ High-level components and infrastructure:
 
 ```mermaid
 flowchart LR
-    Kafka[("Kafka<br/>notification.events")] --> App
+    Kafka[("Kafka<br/>notification.events")] -- "1. consume" --> App
 
     subgraph App["Pheme Notify"]
         direction LR
-        Consumer[Consumer] --> Orchestrator[Orchestrator] --> Providers[Providers<br/>Email / SMS / Push]
+        Consumer[Consumer] -- "2. dispatch" --> Orchestrator[Orchestrator] -- "5. render & send" --> Providers[Providers<br/>Email / SMS / Push]
     end
 
-    App --> Redis[("Redis<br/>dedup · rate limit · cache")]
-    App --> Postgres[("PostgreSQL<br/>notifications · preferences")]
-    Providers --> Mailpit[Mailpit SMTP]
-    App -.metrics.-> Prometheus[Prometheus] --> Grafana[Grafana]
+    Orchestrator -- "3. dedup & rate limit" --> Redis[("Redis<br/>dedup · rate limit · cache")]
+    Orchestrator -- "4. persist status" --> Postgres[("PostgreSQL<br/>notifications · preferences")]
+    Redis ~~~ Postgres
+    Providers -- "6. deliver" --> Mailpit[Mailpit SMTP]
+
+    App -- "7. expose metrics" --> Prometheus[Prometheus] -- "8. visualize" --> Grafana[Grafana]
 ```
 
 ## Notification flow
