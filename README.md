@@ -12,17 +12,18 @@ High-level components and infrastructure:
 
 ```mermaid
 flowchart LR
-    Kafka[("Kafka<br/>notification.events")] --> App
+    Kafka[("Kafka<br/>notification.events")] -- "1. consume" --> App
 
     subgraph App["Pheme Notify"]
         direction LR
-        Consumer[Consumer] --> Orchestrator[Orchestrator] --> Providers[Providers<br/>Email / SMS / Push]
+        Consumer[Consumer] -- "2. dispatch" --> Orchestrator[Orchestrator] -- "5. render & send" --> Providers[Providers<br/>Email / SMS / Push]
     end
 
-    App --> Redis[("Redis<br/>dedup · rate limit · cache")]
-    App --> Postgres[("PostgreSQL<br/>notifications · preferences")]
-    Providers --> Mailpit[Mailpit SMTP]
-    App -.metrics.-> Prometheus[Prometheus] --> Grafana[Grafana]
+    Orchestrator -- "3. dedup & rate limit" --> Redis[("Redis<br/>dedup · rate limit · cache")]
+    Orchestrator -- "4. persist status" --> Postgres[("PostgreSQL<br/>notifications · preferences")]
+    Providers -- "6. deliver" --> Mailpit[Mailpit SMTP]
+
+    Orchestrator -- "7. expose metrics" --> Prometheus[Prometheus] -- "8. visualize" --> Grafana[Grafana]
 ```
 
 ## Notification flow
@@ -82,6 +83,10 @@ This service is event-driven: other services publish events to Kafka, and Pheme 
 
 See `scripts/produce-test-events.sh` for a working example using `kafka-console-producer`.
 
+To check delivery status without knowing the generated notification UUID, use
+`GET /api/v1/notifications/status?eventId={id}&channel={channel}` with the same
+`id`/`channel` values from the published event.
+
 ## Tech stack
 
 - Java 21, Spring Boot 4
@@ -127,6 +132,7 @@ docker compose --profile dev --profile observability up -d
 | GET | `/api/v1/users/{id}/preferences` | Get user notification preferences |
 | PUT | `/api/v1/users/{id}/preferences` | Update enabled channels |
 | GET | `/api/v1/notifications/{id}/status` | Get notification delivery status |
+| GET | `/api/v1/notifications/status?eventId=&channel=` | Get notification delivery status by Kafka event id + channel |
 | GET | `/api/v1/analytics/delivery-stats?startDate=&endDate=` | Delivery stats report (H3) |
 | GET | `/actuator/health` | Health check (PG + Redis + Kafka) |
 | GET | `/actuator/prometheus` | Prometheus metrics |
