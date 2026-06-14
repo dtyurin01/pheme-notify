@@ -50,4 +50,29 @@ class NotificationServiceTest {
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining(id.toString());
   }
+
+  @Test
+  void shouldReturnNotificationResponse_whenFoundByEventIdAndChannel() {
+    UUID id = UUID.randomUUID();
+
+    when(notificationRepository.findByIdempotencyKey("event-1:EMAIL"))
+        .thenReturn(Optional.of(NotificationTestData.defaultEntity(id)));
+
+    NotificationResponse response =
+        notificationService.getByEventIdAndChannel(Channel.EMAIL, "event-1");
+
+    assertThat(response.id()).isEqualTo(id);
+    assertThat(response.channel()).isEqualTo(Channel.EMAIL);
+    assertThat(response.status()).isEqualTo(NotificationStatus.DELIVERED);
+  }
+
+  @Test
+  void shouldThrowResourceNotFoundException_whenNotFoundByEventIdAndChannel() {
+    when(notificationRepository.findByIdempotencyKey("event-1:EMAIL")).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> notificationService.getByEventIdAndChannel(Channel.EMAIL, "event-1"))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContaining("event-1")
+        .hasMessageContaining("EMAIL");
+  }
 }

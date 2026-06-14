@@ -49,6 +49,39 @@ with exponential backoff (skipping the dedup step). Channels are independent —
 one channel failing doesn't block the others (partial failure). Sent/failed
 counters and send-duration timers are recorded per channel via Micrometer.
 
+## Event contract / Integration
+
+This service is event-driven: other services publish events to Kafka, and Pheme Notify consumes them. The REST API is read-only (preferences, status, analytics) — it is not used to trigger notifications.
+
+- **Bootstrap servers**: configured via `KAFKA_BOOTSTRAP_SERVERS` (see `.env.example`)
+- **Topic**: `notification.events`
+- **Format**: JSON, matching the `NotificationEvent` schema below
+
+```json
+{
+  "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "userId": "user-123",
+  "eventType": "ORDER_COMPLETED",
+  "channel": "EMAIL",
+  "payload": {
+    "orderId": "ORD-456",
+    "amount": "99.90"
+  },
+  "occurredAt": "2026-06-14T12:00:00Z"
+}
+```
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | string (UUID) | Idempotency key for deduplication (Redis `SETNX`, TTL 24h) |
+| `userId` | string | Used for preferences and rate limiting |
+| `eventType` | string | One of `ORDER_COMPLETED`, `USER_REGISTERED`, `PAYMENT_FAILED` (extensible via `EventTypeRegistry`) |
+| `channel` | string | One of `EMAIL`, `SMS`, `PUSH` |
+| `payload` | object (string → string) | Template placeholders, e.g. `${orderId}` |
+| `occurredAt` | string (ISO-8601) | Event timestamp |
+
+See `scripts/produce-test-events.sh` for a working example using `kafka-console-producer`.
+
 ## Tech stack
 
 - Java 21, Spring Boot 4

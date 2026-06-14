@@ -7,7 +7,6 @@ import static org.mockito.Mockito.*;
 
 import com.pheme.phemenotify.api.exception.RateLimitExceededException;
 import com.pheme.phemenotify.infrastructure.metrics.NotificationMetrics;
-import com.pheme.phemenotify.infrastructure.redis.RedisDeduplicationAdapter;
 import com.pheme.phemenotify.persistence.entity.Channel;
 import com.pheme.phemenotify.persistence.entity.EventTypeRegistry;
 import com.pheme.phemenotify.persistence.entity.Notification;
@@ -33,7 +32,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class NotificationOrchestratorTest {
 
-  @Mock private RedisDeduplicationAdapter deduplicationAdapter;
+  @Mock private DeduplicationService deduplicationService;
   @Mock private UserPreferenceRepository userPreferenceRepository;
   @Mock private NotificationRepository notificationRepository;
   @Mock private ProviderRegistry providerRegistry;
@@ -68,7 +67,7 @@ class NotificationOrchestratorTest {
 
   @Test
   void shouldSkip_whenEventIsDuplicate() {
-    when(deduplicationAdapter.isNew("event-1")).thenReturn(false);
+    when(deduplicationService.isNew("event-1")).thenReturn(false);
 
     orchestrator.process(NotificationTestData.defaultEvent());
 
@@ -77,7 +76,7 @@ class NotificationOrchestratorTest {
 
   @Test
   void shouldSkip_whenUserPreferencesNotFound() {
-    when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
+    when(deduplicationService.isNew("event-1")).thenReturn(true);
     when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.empty());
 
     orchestrator.process(NotificationTestData.defaultEvent());
@@ -87,7 +86,7 @@ class NotificationOrchestratorTest {
 
   @Test
   void shouldSkip_whenEnabledChannelsEmpty() {
-    when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
+    when(deduplicationService.isNew("event-1")).thenReturn(true);
     when(userPreferenceRepository.findByUserId("user-1"))
         .thenReturn(Optional.of(PreferenceTestData.entityWithNoChannels()));
 
@@ -98,7 +97,7 @@ class NotificationOrchestratorTest {
 
   @Test
   void shouldDeliverNotification_whenAllSuccess() {
-    when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
+    when(deduplicationService.isNew("event-1")).thenReturn(true);
     when(userPreferenceRepository.findByUserId("user-1"))
         .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
     when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
@@ -115,7 +114,7 @@ class NotificationOrchestratorTest {
 
   @Test
   void shouldMarkAsFailed_whenProviderThrows() {
-    when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
+    when(deduplicationService.isNew("event-1")).thenReturn(true);
     when(userPreferenceRepository.findByUserId("user-1"))
         .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
     when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
@@ -135,7 +134,7 @@ class NotificationOrchestratorTest {
 
   @Test
   void shouldMarkAsFailed_whenRateLimitExceeded() {
-    when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
+    when(deduplicationService.isNew("event-1")).thenReturn(true);
     when(userPreferenceRepository.findByUserId("user-1"))
         .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
     doThrow(new RateLimitExceededException("max 5 email notifications per 1h"))
@@ -173,7 +172,7 @@ class NotificationOrchestratorTest {
 
   @Test
   void shouldContinueOtherChannels_whenOneChannelFails() {
-    when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
+    when(deduplicationService.isNew("event-1")).thenReturn(true);
     UserPreferences prefs =
         PreferenceTestData.entityWith("user-1", Set.of(Channel.EMAIL, Channel.SMS), "en", "UTC");
 
@@ -191,7 +190,7 @@ class NotificationOrchestratorTest {
 
   @Test
   void shouldSkipChannel_whenEventTypeUnknown() {
-    when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
+    when(deduplicationService.isNew("event-1")).thenReturn(true);
     when(userPreferenceRepository.findByUserId("user-1"))
         .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
     when(eventTypeRegistry.findByCode(OrderCompletedEventType.CODE)).thenReturn(Optional.empty());

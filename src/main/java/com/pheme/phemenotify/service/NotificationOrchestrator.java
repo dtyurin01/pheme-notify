@@ -2,7 +2,6 @@ package com.pheme.phemenotify.service;
 
 import com.pheme.phemenotify.api.exception.RateLimitExceededException;
 import com.pheme.phemenotify.infrastructure.metrics.NotificationMetrics;
-import com.pheme.phemenotify.infrastructure.redis.RedisDeduplicationAdapter;
 import com.pheme.phemenotify.messaging.event.NotificationEvent;
 import com.pheme.phemenotify.persistence.entity.Channel;
 import com.pheme.phemenotify.persistence.entity.EventType;
@@ -29,7 +28,7 @@ public class NotificationOrchestrator {
 
   private static final String IDEMPOTENCY_KEY_FORMAT = "%s:%s";
 
-  private final RedisDeduplicationAdapter deduplicationAdapter;
+  private final DeduplicationService deduplicationService;
   private final UserPreferenceRepository userPreferenceRepository;
   private final NotificationRepository notificationRepository;
   private final ProviderRegistry providerRegistry;
@@ -66,7 +65,7 @@ public class NotificationOrchestrator {
    * others (partial failure).
    */
   public void process(NotificationEvent notificationEvent) {
-    if (!deduplicationAdapter.isNew(notificationEvent.id())) {
+    if (!deduplicationService.isNew(notificationEvent.id())) {
       log.warn("Duplicate event {}, skipping", notificationEvent.id());
       return;
     }

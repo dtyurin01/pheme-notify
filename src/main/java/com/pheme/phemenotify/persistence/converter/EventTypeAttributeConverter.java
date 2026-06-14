@@ -25,6 +25,12 @@ public class EventTypeAttributeConverter implements AttributeConverter<EventType
       return null;
     }
 
+    if (registry == null) {
+      throw new IllegalStateException(
+          "EventTypeAttributeConverter is not Spring-managed - EventTypeRegistry is null. "
+              + "Hibernate likely instantiated this converter directly instead of using the Spring bean.");
+    }
+
     return registry
         .findByCode(code)
         .orElseThrow(() -> new IllegalArgumentException("Unknown event type: " + code));
