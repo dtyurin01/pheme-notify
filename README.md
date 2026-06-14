@@ -82,6 +82,10 @@ This service is event-driven: other services publish events to Kafka, and Pheme 
 
 See `scripts/produce-test-events.sh` for a working example using `kafka-console-producer`.
 
+To check delivery status without knowing the generated notification UUID, use
+`GET /api/v1/notifications/status?eventId={id}&channel={channel}` with the same
+`id`/`channel` values from the published event.
+
 ## Tech stack
 
 - Java 21, Spring Boot 4
@@ -127,6 +131,7 @@ docker compose --profile dev --profile observability up -d
 | GET | `/api/v1/users/{id}/preferences` | Get user notification preferences |
 | PUT | `/api/v1/users/{id}/preferences` | Update enabled channels |
 | GET | `/api/v1/notifications/{id}/status` | Get notification delivery status |
+| GET | `/api/v1/notifications/status?eventId=&channel=` | Get notification delivery status by Kafka event id + channel |
 | GET | `/api/v1/analytics/delivery-stats?startDate=&endDate=` | Delivery stats report (H3) |
 | GET | `/actuator/health` | Health check (PG + Redis + Kafka) |
 | GET | `/actuator/prometheus` | Prometheus metrics |
