@@ -67,6 +67,7 @@ public class NotificationOrchestrator {
   public void process(NotificationEvent notificationEvent) {
     if (!deduplicationService.isNew(notificationEvent.id())) {
       log.warn("Duplicate event {}, skipping", notificationEvent.id());
+      notificationMetrics.incrementDuplicateSkipped();
       return;
     }
 
@@ -134,6 +135,7 @@ public class NotificationOrchestrator {
       notification.setStatus(NotificationStatus.FAILED);
       notification.setErrorMessage("RATE_LIMIT_EXCEEDED");
       notificationRepository.save(notification);
+      notificationMetrics.incrementFailed(channel);
       log.warn(
           "Rate limit exceeded for event {} on channel {}: {}",
           notificationEvent.id(),

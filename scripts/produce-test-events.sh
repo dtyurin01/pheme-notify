@@ -15,8 +15,8 @@ RUN_ID=$(date +%s)
 
 event() {
   local id=$1 user=$2 type=$3 channel=$4
-  printf '{"id":"%s","userId":"%s","eventType":"%s","channel":"%s","payload":{"orderId":"123"},"occurredAt":"%s"}' \
-    "$id" "$user" "$type" "$channel" "$(now)"
+  printf '{"id":"%s","userId":"%s","eventType":"%s","channel":"%s","payload":{"orderId":"123","email":"%s@example.com"},"occurredAt":"%s"}' \
+    "$id" "$user" "$type" "$channel" "$user" "$(now)"
 }
 
 echo "Sending normal events (sent/failed/duration metrics)..."
