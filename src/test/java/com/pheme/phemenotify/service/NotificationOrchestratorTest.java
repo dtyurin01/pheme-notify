@@ -1,6 +1,12 @@
 package com.pheme.phemenotify.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
 import com.pheme.phemenotify.api.exception.RateLimitExceededException;
+import com.pheme.phemenotify.infrastructure.metrics.NotificationMetrics;
 import com.pheme.phemenotify.infrastructure.redis.RedisDeduplicationAdapter;
 import com.pheme.phemenotify.persistence.entity.Channel;
 import com.pheme.phemenotify.persistence.entity.EventTypeRegistry;
@@ -14,6 +20,8 @@ import com.pheme.phemenotify.provider.NotificationProvider;
 import com.pheme.phemenotify.provider.ProviderRegistry;
 import com.pheme.phemenotify.util.NotificationTestData;
 import com.pheme.phemenotify.util.PreferenceTestData;
+import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,187 +30,175 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Optional;
-import java.util.Set;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class NotificationOrchestratorTest {
 
-    @Mock
-    private RedisDeduplicationAdapter deduplicationAdapter;
-    @Mock
-    private UserPreferenceRepository userPreferenceRepository;
-    @Mock
-    private NotificationRepository notificationRepository;
-    @Mock
-    private ProviderRegistry providerRegistry;
-    @Mock
-    private RateLimitService rateLimitService;
-    @Mock
-    private NotificationProvider emailProvider;
-    @Mock
-    private NotificationProvider smsProvider;
+  @Mock private RedisDeduplicationAdapter deduplicationAdapter;
+  @Mock private UserPreferenceRepository userPreferenceRepository;
+  @Mock private NotificationRepository notificationRepository;
+  @Mock private ProviderRegistry providerRegistry;
+  @Mock private RateLimitService rateLimitService;
+  @Mock private NotificationProvider emailProvider;
+  @Mock private NotificationProvider smsProvider;
 
-    @Mock
-    private TemplateService templateService;
+  @Mock private TemplateService templateService;
 
-    @Mock
-    private EventTypeRegistry eventTypeRegistry;
+  @Mock private EventTypeRegistry eventTypeRegistry;
 
-    @InjectMocks
-    private NotificationOrchestrator orchestrator;
+  @Mock private NotificationMetrics notificationMetrics;
 
-    @BeforeEach
-    void setUp() {
-        lenient().when(notificationRepository.save(
-            any())).thenAnswer(
-            inv -> inv.getArgument(0));
+  @InjectMocks private NotificationOrchestrator orchestrator;
 
-        lenient().when(templateService.render(any(), any(),
-            any())).thenReturn("rendered-template");
+  @BeforeEach
+  void setUp() {
+    lenient().when(notificationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        lenient().when(eventTypeRegistry.findByCode(OrderCompletedEventType.CODE))
-            .thenReturn(java.util.Optional.of(new OrderCompletedEventType()));
-    }
+    lenient().when(templateService.render(any(), any(), any())).thenReturn("rendered-template");
 
-    @Test
-    void shouldSkip_whenEventIsDuplicate() {
-        when(deduplicationAdapter.isNew("event-1")).thenReturn(false);
+    lenient()
+        .when(eventTypeRegistry.findByCode(OrderCompletedEventType.CODE))
+        .thenReturn(java.util.Optional.of(new OrderCompletedEventType()));
 
-        orchestrator.process(NotificationTestData.defaultEvent());
+    lenient()
+        .when(notificationMetrics.sendTimer())
+        .thenReturn(
+            io.micrometer.core.instrument.Timer.start(
+                new io.micrometer.core.instrument.simple.SimpleMeterRegistry()));
+  }
 
-        verifyNoInteractions(notificationRepository);
-    }
+  @Test
+  void shouldSkip_whenEventIsDuplicate() {
+    when(deduplicationAdapter.isNew("event-1")).thenReturn(false);
 
-    @Test
-    void shouldSkip_whenUserPreferencesNotFound() {
-        when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
-        when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.empty());
+    orchestrator.process(NotificationTestData.defaultEvent());
 
-        orchestrator.process(NotificationTestData.defaultEvent());
+    verifyNoInteractions(notificationRepository);
+  }
 
-        verifyNoInteractions(notificationRepository);
-    }
+  @Test
+  void shouldSkip_whenUserPreferencesNotFound() {
+    when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
+    when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.empty());
 
-    @Test
-    void shouldSkip_whenEnabledChannelsEmpty() {
-        when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
-        when(userPreferenceRepository.findByUserId("user-1"))
-            .thenReturn(Optional.of(PreferenceTestData.entityWithNoChannels()));
+    orchestrator.process(NotificationTestData.defaultEvent());
 
-        orchestrator.process(NotificationTestData.defaultEvent());
+    verifyNoInteractions(notificationRepository);
+  }
 
-        verifyNoInteractions(notificationRepository);
-    }
+  @Test
+  void shouldSkip_whenEnabledChannelsEmpty() {
+    when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
+    when(userPreferenceRepository.findByUserId("user-1"))
+        .thenReturn(Optional.of(PreferenceTestData.entityWithNoChannels()));
 
-    @Test
-    void shouldDeliverNotification_whenAllSuccess() {
-        when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
-        when(userPreferenceRepository.findByUserId("user-1"))
-            .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
-        when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
+    orchestrator.process(NotificationTestData.defaultEvent());
 
-        orchestrator.process(NotificationTestData.defaultEvent());
+    verifyNoInteractions(notificationRepository);
+  }
 
-        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
-        verify(notificationRepository, times(2)).save(captor.capture());
-        assertThat(captor.getAllValues().get(1).getStatus()).isEqualTo(NotificationStatus.DELIVERED);
-    }
+  @Test
+  void shouldDeliverNotification_whenAllSuccess() {
+    when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
+    when(userPreferenceRepository.findByUserId("user-1"))
+        .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
+    when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
 
-    @Test
-    void shouldMarkAsFailed_whenProviderThrows() {
-        when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
-        when(userPreferenceRepository.findByUserId("user-1"))
-            .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
-        when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
-        doThrow(new RuntimeException("SMTP error")).when(emailProvider).send(any(), any());
+    orchestrator.process(NotificationTestData.defaultEvent());
 
-        orchestrator.process(NotificationTestData.defaultEvent());
+    ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+    verify(notificationRepository, times(2)).save(captor.capture());
+    assertThat(captor.getAllValues().get(1).getStatus()).isEqualTo(NotificationStatus.DELIVERED);
+    verify(notificationMetrics).incrementSent(Channel.EMAIL);
+    verify(notificationMetrics, never()).incrementFailed(any());
+    verify(notificationMetrics).recordSendDuration(any(), eq(Channel.EMAIL));
+  }
 
-        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
-        verify(notificationRepository, times(2)).save(captor.capture());
-        assertThat(captor.getAllValues().get(1).getStatus()).isEqualTo(NotificationStatus.FAILED);
-        assertThat(captor.getAllValues().get(1).getErrorMessage()).isEqualTo("SEND_FAILED:RuntimeException");
-    }
+  @Test
+  void shouldMarkAsFailed_whenProviderThrows() {
+    when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
+    when(userPreferenceRepository.findByUserId("user-1"))
+        .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
+    when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
+    doThrow(new RuntimeException("SMTP error")).when(emailProvider).send(any(), any());
 
-    @Test
-    void shouldMarkAsFailed_whenRateLimitExceeded() {
-        when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
-        when(userPreferenceRepository.findByUserId("user-1"))
-            .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
-        doThrow(new RateLimitExceededException("max 5 email notifications per 1h"))
-            .when(rateLimitService).checkLimit("user-1", Channel.EMAIL);
+    orchestrator.process(NotificationTestData.defaultEvent());
 
-        orchestrator.process(NotificationTestData.defaultEvent());
+    ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+    verify(notificationRepository, times(2)).save(captor.capture());
+    assertThat(captor.getAllValues().get(1).getStatus()).isEqualTo(NotificationStatus.FAILED);
+    assertThat(captor.getAllValues().get(1).getErrorMessage())
+        .isEqualTo("SEND_FAILED:RuntimeException");
+    verify(notificationMetrics).incrementFailed(Channel.EMAIL);
+    verify(notificationMetrics, never()).incrementSent(any());
+    verify(notificationMetrics).recordSendDuration(any(), eq(Channel.EMAIL));
+  }
 
-        ArgumentCaptor<Notification> captor =
-            ArgumentCaptor.forClass(Notification.class);
+  @Test
+  void shouldMarkAsFailed_whenRateLimitExceeded() {
+    when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
+    when(userPreferenceRepository.findByUserId("user-1"))
+        .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
+    doThrow(new RateLimitExceededException("max 5 email notifications per 1h"))
+        .when(rateLimitService)
+        .checkLimit("user-1", Channel.EMAIL);
 
-        verify(notificationRepository, times(2)).save(captor.capture());
+    orchestrator.process(NotificationTestData.defaultEvent());
 
-        assertThat(captor.getAllValues().get(1)
-            .getStatus()).isEqualTo(NotificationStatus.FAILED);
+    ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
 
-        assertThat(captor.getAllValues().get(1)
-            .getErrorMessage()).isEqualTo("RATE_LIMIT_EXCEEDED");
+    verify(notificationRepository, times(2)).save(captor.capture());
 
-        verify(providerRegistry, never()).getProvider(any());
-    }
+    assertThat(captor.getAllValues().get(1).getStatus()).isEqualTo(NotificationStatus.FAILED);
 
-    @Test
-    void shouldRetryOnlySpecificChannel_whenProcessRetry() {
-        UserPreferences prefs =
-            PreferenceTestData.entityWith(
-                "user-1", Set.of(Channel.EMAIL, Channel.SMS),
-                "en", "UTC");
+    assertThat(captor.getAllValues().get(1).getErrorMessage()).isEqualTo("RATE_LIMIT_EXCEEDED");
 
-        when(userPreferenceRepository.findByUserId("user-1"))
-            .thenReturn(Optional.of(prefs));
-        when(providerRegistry.getProvider(Channel.EMAIL))
-            .thenReturn(emailProvider);
-        lenient().when(providerRegistry.getProvider(Channel.SMS))
-            .thenReturn(smsProvider);
+    verify(providerRegistry, never()).getProvider(any());
+    verifyNoInteractions(notificationMetrics);
+  }
 
-        orchestrator.processRetry(NotificationTestData.defaultEvent());
+  @Test
+  void shouldRetryOnlySpecificChannel_whenProcessRetry() {
+    UserPreferences prefs =
+        PreferenceTestData.entityWith("user-1", Set.of(Channel.EMAIL, Channel.SMS), "en", "UTC");
 
-        verify(emailProvider).send(any(), any());
-        verify(smsProvider, never()).send(any(), any());
-    }
+    when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(prefs));
+    when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
+    lenient().when(providerRegistry.getProvider(Channel.SMS)).thenReturn(smsProvider);
 
+    orchestrator.processRetry(NotificationTestData.defaultEvent());
 
-    @Test
-    void shouldContinueOtherChannels_whenOneChannelFails() {
-        when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
-        UserPreferences prefs = PreferenceTestData.entityWith(
-            "user-1", Set.of(Channel.EMAIL, Channel.SMS), "en", "UTC");
+    verify(emailProvider).send(any(), any());
+    verify(smsProvider, never()).send(any(), any());
+  }
 
-        when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(prefs));
-        when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
-        when(providerRegistry.getProvider(Channel.SMS)).thenReturn(smsProvider);
-        doThrow(new RuntimeException("SMTP error")).when(emailProvider).send(any(), any());
+  @Test
+  void shouldContinueOtherChannels_whenOneChannelFails() {
+    when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
+    UserPreferences prefs =
+        PreferenceTestData.entityWith("user-1", Set.of(Channel.EMAIL, Channel.SMS), "en", "UTC");
 
-        orchestrator.process(NotificationTestData.defaultEvent());
+    when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(prefs));
+    when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
+    when(providerRegistry.getProvider(Channel.SMS)).thenReturn(smsProvider);
+    doThrow(new RuntimeException("SMTP error")).when(emailProvider).send(any(), any());
 
-        verify(notificationRepository, times(4)).save(any());
-        verify(emailProvider).send(any(), any());
-        verify(smsProvider).send(any(), any());
-    }
+    orchestrator.process(NotificationTestData.defaultEvent());
 
-    @Test
-    void shouldSkipChannel_whenEventTypeUnknown() {
-        when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
-        when(userPreferenceRepository.findByUserId("user-1"))
-            .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
-        when(eventTypeRegistry.findByCode(OrderCompletedEventType.CODE))
-            .thenReturn(Optional.empty());
+    verify(notificationRepository, times(4)).save(any());
+    verify(emailProvider).send(any(), any());
+    verify(smsProvider).send(any(), any());
+  }
 
-        orchestrator.process(NotificationTestData.defaultEvent());
+  @Test
+  void shouldSkipChannel_whenEventTypeUnknown() {
+    when(deduplicationAdapter.isNew("event-1")).thenReturn(true);
+    when(userPreferenceRepository.findByUserId("user-1"))
+        .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
+    when(eventTypeRegistry.findByCode(OrderCompletedEventType.CODE)).thenReturn(Optional.empty());
 
-        verifyNoInteractions(notificationRepository);
-        verifyNoInteractions(providerRegistry);
-    }
+    orchestrator.process(NotificationTestData.defaultEvent());
+
+    verifyNoInteractions(notificationRepository);
+    verifyNoInteractions(providerRegistry);
+  }
 }

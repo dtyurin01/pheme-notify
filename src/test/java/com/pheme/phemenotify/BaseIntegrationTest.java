@@ -17,40 +17,37 @@ import org.testcontainers.utility.DockerImageName;
 @ActiveProfiles("test")
 public abstract class BaseIntegrationTest {
 
-    @MockitoBean
-    FailedNotificationRetryScheduler retryScheduler;
+  @MockitoBean FailedNotificationRetryScheduler retryScheduler;
 
-    @SuppressWarnings("deprecation")
-    static final PostgreSQLContainer<?> postgres =
-        new PostgreSQLContainer<>("postgres:17")
-            .withDatabaseName("pheme_test")
-            .withUsername("pheme")
-            .withPassword("pheme");
+  @SuppressWarnings("deprecation")
+  static final PostgreSQLContainer<?> postgres =
+      new PostgreSQLContainer<>("postgres:17")
+          .withDatabaseName("pheme_test")
+          .withUsername("pheme")
+          .withPassword("pheme");
 
-    static final RedisContainer redis =
-        new RedisContainer(DockerImageName.parse("redis:7-alpine"));
+  static final RedisContainer redis = new RedisContainer(DockerImageName.parse("redis:7-alpine"));
 
-    @SuppressWarnings("deprecation")
-    static final KafkaContainer kafka =
-        new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.9.0"));
+  @SuppressWarnings("deprecation")
+  static final KafkaContainer kafka =
+      new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.9.0"));
 
-    static final GenericContainer<?> mailpit =
-        new GenericContainer<>("axllent/mailpit")
-            .withExposedPorts(1025, 8025);
+  static final GenericContainer<?> mailpit =
+      new GenericContainer<>("axllent/mailpit").withExposedPorts(1025, 8025);
 
-    static {
-        Startables.deepStart(postgres, redis, kafka, mailpit).join();
-    }
+  static {
+    Startables.deepStart(postgres, redis, kafka, mailpit).join();
+  }
 
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.data.redis.host", redis::getHost);
-        registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
-        registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
-        registry.add("spring.mail.host", mailpit::getHost);
-        registry.add("spring.mail.port", () -> mailpit.getMappedPort(1025));
-    }
+  @DynamicPropertySource
+  static void configureProperties(DynamicPropertyRegistry registry) {
+    registry.add("spring.datasource.url", postgres::getJdbcUrl);
+    registry.add("spring.datasource.username", postgres::getUsername);
+    registry.add("spring.datasource.password", postgres::getPassword);
+    registry.add("spring.data.redis.host", redis::getHost);
+    registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
+    registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
+    registry.add("spring.mail.host", mailpit::getHost);
+    registry.add("spring.mail.port", () -> mailpit.getMappedPort(1025));
+  }
 }

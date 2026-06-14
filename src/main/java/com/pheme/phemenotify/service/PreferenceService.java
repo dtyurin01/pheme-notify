@@ -12,39 +12,42 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class PreferenceService {
-    private final UserPreferenceRepository repository;
+  private final UserPreferenceRepository repository;
 
-    @Transactional(readOnly = true)
-    public PreferenceResponse getByUserId(String userId) {
-        return repository.findByUserId(userId)
-            .map(this::toResponse)
-            .orElseThrow(() -> new ResourceNotFoundException("Preferences not found for user: " + userId));
-    }
+  @Transactional(readOnly = true)
+  public PreferenceResponse getByUserId(String userId) {
+    return repository
+        .findByUserId(userId)
+        .map(this::toResponse)
+        .orElseThrow(
+            () -> new ResourceNotFoundException("Preferences not found for user: " + userId));
+  }
 
-    @Transactional
-    public PreferenceResponse upsert(String userId, CreatePreferenceRequest createPreferenceRequest) {
-        UserPreferences userPreferences = repository.findByUserId(userId)
+  @Transactional
+  public PreferenceResponse upsert(String userId, CreatePreferenceRequest createPreferenceRequest) {
+    UserPreferences userPreferences =
+        repository
+            .findByUserId(userId)
             .orElseGet(() -> UserPreferences.builder().userId(userId).build());
 
-        userPreferences.setEnabledChannels(createPreferenceRequest.enabledChannels());
+    userPreferences.setEnabledChannels(createPreferenceRequest.enabledChannels());
 
-        if (createPreferenceRequest.locale() != null) {
-            userPreferences.setLocale(createPreferenceRequest.locale());
-        }
-        if (createPreferenceRequest.timezone() != null) {
-            userPreferences.setTimezone(createPreferenceRequest.timezone());
-        }
-
-        return toResponse(repository.save(userPreferences));
+    if (createPreferenceRequest.locale() != null) {
+      userPreferences.setLocale(createPreferenceRequest.locale());
+    }
+    if (createPreferenceRequest.timezone() != null) {
+      userPreferences.setTimezone(createPreferenceRequest.timezone());
     }
 
-    private PreferenceResponse toResponse(UserPreferences entity) {
-        return new PreferenceResponse(
-            entity.getUserId(),
-            entity.getEnabledChannels(),
-            entity.getLocale(),
-            entity.getTimezone(),
-            entity.isEnabled()
-        );
-    }
+    return toResponse(repository.save(userPreferences));
+  }
+
+  private PreferenceResponse toResponse(UserPreferences entity) {
+    return new PreferenceResponse(
+        entity.getUserId(),
+        entity.getEnabledChannels(),
+        entity.getLocale(),
+        entity.getTimezone(),
+        entity.isEnabled());
+  }
 }

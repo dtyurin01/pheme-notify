@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class PushProvider implements NotificationProvider {
 
-    @Override
-    public void send(NotificationEvent event, String renderedTemplate) {
-        log.info("Push notification sent to user {}: {}", event.userId(), renderedTemplate);
-    }
+  @Override
+  public void send(NotificationEvent event, String renderedTemplate) {
+    log.info("Push notification sent to user {}: {}", event.userId(), renderedTemplate);
+  }
 }

@@ -1,22 +1,5 @@
 package com.pheme.phemenotify.api.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pheme.phemenotify.api.ApiPaths;
-import com.pheme.phemenotify.api.dto.request.CreatePreferenceRequest;
-import com.pheme.phemenotify.api.dto.response.PreferenceResponse;
-import com.pheme.phemenotify.api.exception.ResourceNotFoundException;
-import com.pheme.phemenotify.messaging.event.EventTypeDeserializer;
-import com.pheme.phemenotify.service.PreferenceService;
-import com.pheme.phemenotify.util.PreferenceTestData;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.Set;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -27,68 +10,87 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pheme.phemenotify.api.ApiPaths;
+import com.pheme.phemenotify.api.dto.request.CreatePreferenceRequest;
+import com.pheme.phemenotify.api.dto.response.PreferenceResponse;
+import com.pheme.phemenotify.api.exception.ResourceNotFoundException;
+import com.pheme.phemenotify.messaging.event.EventTypeDeserializer;
+import com.pheme.phemenotify.service.PreferenceService;
+import com.pheme.phemenotify.util.PreferenceTestData;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
 @WebMvcTest(PreferenceController.class)
 public class PreferenceControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+  @Autowired private MockMvc mockMvc;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @MockitoBean
-    private PreferenceService preferenceService;
+  @MockitoBean private PreferenceService preferenceService;
 
-    @MockitoBean
-    private EventTypeDeserializer eventTypeDeserializer;
+  @MockitoBean private EventTypeDeserializer eventTypeDeserializer;
 
+  private static final String ENDPOINT = ApiPaths.V1 + "/users/{userId}/preferences";
 
-    private static final String ENDPOINT = ApiPaths.V1 + "/users/{userId}/preferences";
+  @Test
+  void shouldReturn200WithPreferenceResponse_whenUserExists() throws Exception {
+    PreferenceResponse response = PreferenceTestData.defaultResponse();
+    when(preferenceService.getByUserId("user-1")).thenReturn(response);
 
-    @Test
-    void shouldReturn200WithPreferenceResponse_whenUserExists() throws Exception {
-        PreferenceResponse response = PreferenceTestData.defaultResponse();
-        when(preferenceService.getByUserId("user-1")).thenReturn(response);
+    mockMvc
+        .perform(get(ENDPOINT, "user-1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.userId").value("user-1"))
+        .andExpect(jsonPath("$.enabled").value(true));
+  }
 
-        mockMvc.perform(get(ENDPOINT, "user-1"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.userId").value("user-1"))
-            .andExpect(jsonPath("$.enabled").value(true));
-    }
+  @Test
+  void shouldReturn404_whenUserNotFound() throws Exception {
+    when(preferenceService.getByUserId("unknown"))
+        .thenThrow(new ResourceNotFoundException("User not found"));
 
-    @Test
-    void shouldReturn404_whenUserNotFound() throws Exception {
-        when(preferenceService.getByUserId("unknown")).thenThrow(new ResourceNotFoundException("User not found"));
+    mockMvc
+        .perform(get(ENDPOINT, "unknown"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.title").value("Resource Not Found"));
+  }
 
-        mockMvc.perform(get(ENDPOINT, "unknown"))
-            .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.title").value("Resource Not Found"));
-    }
+  @Test
+  void shouldReturn200WithUpdatedPreferences_whenRequestIsValid() throws Exception {
+    CreatePreferenceRequest request = PreferenceTestData.defaultRequest();
+    PreferenceResponse response = PreferenceTestData.defaultResponse();
 
-    @Test
-    void shouldReturn200WithUpdatedPreferences_whenRequestIsValid() throws Exception {
-        CreatePreferenceRequest request = PreferenceTestData.defaultRequest();
-        PreferenceResponse response = PreferenceTestData.defaultResponse();
+    when(preferenceService.upsert(eq("user-1"), any())).thenReturn(response);
 
-        when(preferenceService.upsert(eq("user-1"), any())).thenReturn(response);
-
-        mockMvc.perform(put(ENDPOINT, "user-1")
+    mockMvc
+        .perform(
+            put(ENDPOINT, "user-1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.userId").value("user-1"))
-            .andExpect(jsonPath("$.enabled").value(true));
-    }
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.userId").value("user-1"))
+        .andExpect(jsonPath("$.enabled").value(true));
+  }
 
-    @Test
-    void shouldReturn400_whenEnabledChannelIsEmpty() throws Exception {
-        CreatePreferenceRequest request = new CreatePreferenceRequest(Set.of(), "en", "UTC");
+  @Test
+  void shouldReturn400_whenEnabledChannelIsEmpty() throws Exception {
+    CreatePreferenceRequest request = new CreatePreferenceRequest(Set.of(), "en", "UTC");
 
-        mockMvc.perform(put(ENDPOINT, "user-1")
+    mockMvc
+        .perform(
+            put(ENDPOINT, "user-1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.title").value("Validation Failed"));
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.title").value("Validation Failed"));
 
-        verify(preferenceService, never()).upsert(any(), any());
-    }
+    verify(preferenceService, never()).upsert(any(), any());
+  }
 }

@@ -1,0 +1,138 @@
+{
+  "title": "Pheme Notify",
+  "uid": "pheme-notify",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Notifications Sent (rate by channel)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum by (channel) (rate(notifications_sent_total[5m]))",
+          "legendFormat": "{{channel}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Notifications Failed (rate by channel)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum by (channel) (rate(notifications_failed_total[5m]))",
+          "legendFormat": "{{channel}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Send Duration p99 by channel",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum by (le, channel) (rate(notification_send_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{channel}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Circuit Breaker State (Email)",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "CLOSED", "color": "green" } } },
+            { "type": "value", "options": { "1": { "text": "OPEN", "color": "red" } } },
+            { "type": "value", "options": { "2": { "text": "HALF_OPEN", "color": "yellow" } } }
+          ]
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "resilience4j_circuitbreaker_state{name=\"email\", state=\"open\"} + resilience4j_circuitbreaker_state{name=\"email\", state=\"half_open\"} * 2",
+          "legendFormat": "email CB"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "DLT Events (rate)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(rate(notifications_dlt_total[5m]))",
+          "legendFormat": "dlt"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Kafka Consumer Lag",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "max by (client_id, topic) (kafka_consumer_fetch_manager_records_lag_max)",
+          "legendFormat": "{{client_id}} - {{topic}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Duplicate Events Skipped (rate)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum(rate(notifications_duplicate_skipped_total[5m]))",
+          "legendFormat": "duplicate"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Rate Limit Exceeded (rate by channel)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum by (channel) (rate(notifications_ratelimit_exceeded_total[5m]))",
+          "legendFormat": "{{channel}}"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Retry Outcomes (rate)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "targets": [
+        { "expr": "sum(rate(notifications_retry_success_total[5m]))", "legendFormat": "success" },
+        { "expr": "sum(rate(notifications_retry_failed_total[5m]))", "legendFormat": "failed" },
+        { "expr": "sum(rate(notifications_retry_exhausted_total[5m]))", "legendFormat": "exhausted" }
+      ]
+    }
+  ]
+}

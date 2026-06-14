@@ -5,13 +5,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record DeliveryStatsResponse(
-        String channel,
-        String eventType,
-        LocalDate date,
-        long total,
-        long delivered,
-        long failed,
-        BigDecimal deliveryRate,
-        BigDecimal rollingWeeklyAvg
-) implements Serializable {
-}
+    String channel,
+    String eventType,
+    LocalDate date,
+    long total,
+    long delivered,
+    long failed,
+    BigDecimal deliveryRate,
+    BigDecimal rollingWeeklyAvg)
+    implements Serializable {}
