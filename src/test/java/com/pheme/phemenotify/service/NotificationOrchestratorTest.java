@@ -72,6 +72,7 @@ class NotificationOrchestratorTest {
     orchestrator.process(NotificationTestData.defaultEvent());
 
     verifyNoInteractions(notificationRepository);
+    verify(notificationMetrics).incrementDuplicateSkipped();
   }
 
   @Test
@@ -152,7 +153,8 @@ class NotificationOrchestratorTest {
     assertThat(captor.getAllValues().get(1).getErrorMessage()).isEqualTo("RATE_LIMIT_EXCEEDED");
 
     verify(providerRegistry, never()).getProvider(any());
-    verifyNoInteractions(notificationMetrics);
+    verify(notificationMetrics).incrementFailed(Channel.EMAIL);
+    verifyNoMoreInteractions(notificationMetrics);
   }
 
   @Test
