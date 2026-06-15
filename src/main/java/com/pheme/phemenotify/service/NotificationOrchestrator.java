@@ -67,7 +67,6 @@ public class NotificationOrchestrator {
   public void process(NotificationEvent notificationEvent) {
     if (!deduplicationService.isNew(notificationEvent.id())) {
       log.warn("Duplicate event {}, skipping", notificationEvent.id());
-      notificationMetrics.incrementDuplicateSkipped();
       return;
     }
 

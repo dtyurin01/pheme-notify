@@ -28,7 +28,7 @@ public class AnalyticsController {
       description =
           "Returns daily delivery statistics per channel and event type, including rolling 7-day"
               + " average delivery rate")
-  @GetMapping("/delivery-stats")
+  @GetMapping(path = "/delivery-stats", version = "1")
   public ResponseEntity<List<DeliveryStatsResponse>> getDeliveryStats(
       @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
       @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
