@@ -23,7 +23,7 @@ flowchart LR
     Orchestrator -- "4. persist status" --> Postgres[("PostgreSQL<br/>notifications · preferences")]
     Providers -- "6. deliver" --> Mailpit[Mailpit SMTP]
 
-    Orchestrator -- "7. expose metrics" --> Prometheus[Prometheus] -- "8. visualize" --> Grafana[Grafana]
+    Orchestrator -- "7. metrics" --> Prometheus[Prometheus] -- "8. visualize" --> Grafana[Grafana]
 ```
 
 ## Notification flow
