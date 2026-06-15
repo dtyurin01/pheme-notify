@@ -44,11 +44,27 @@ flowchart TD
     Send -- error --> Failed2[FAILED:<br/>SEND_FAILED]
 ```
 
-If all Kafka retries are exhausted, the event goes to the DLT and is stored in
-`failed_notifications` (JSONB); a scheduled retry job re-runs the same pipeline
-with exponential backoff (skipping the dedup step). Channels are independent —
-one channel failing doesn't block the others (partial failure). Sent/failed
-counters and send-duration timers are recorded per channel via Micrometer.
+Channels are independent — one channel failing doesn't block the others
+(partial failure). Sent/failed counters and send-duration timers are recorded
+per channel via Micrometer.
+
+## Failure & retry flow
+
+If the consumer throws, Spring Kafka retries with exponential backoff before
+giving up to the Dead Letter Topic; a scheduler then drains
+`failed_notifications` and re-runs the pipeline (skipping dedup):
+
+```mermaid
+flowchart TD
+    Consumer[Consumer] -- "throws" --> Retry1["notification.events-retry-0<br/>5s backoff"]
+    Retry1 -- "throws" --> Retry2["notification.events-retry-1<br/>10s backoff"]
+    Retry2 -- "throws" --> Dlt["notification.events.dlt"]
+    Dlt -- "@DltHandler" --> Failed[("failed_notifications<br/>JSONB payload")]
+    Failed -- "scheduled job<br/>skip dedup" --> Orchestrator[Orchestrator]
+    Orchestrator -- "success" --> Done[DELIVERED]
+    Orchestrator -- "still failing<br/>retry 1-3, 5m/10m/20m" --> Failed
+    Failed -- "3 retries exhausted" --> Exhausted[FAILED]
+```
 
 ## Event contract / Integration
 
@@ -119,8 +135,8 @@ docker compose --profile dev --profile observability up -d
 | Service | URL |
 |---------|-----|
 | App | http://localhost:8080 |
-| Swagger UI | http://localhost:8080/swagger-ui.html |
-| Kafka UI | http://localhost:8090 |
+| Swagger UI | http://localhost:8080/swagger-ui/index.html |
+| Kafka UI | http://localhost:8090 |/swagger-ui/index.html
 | Mailpit (email inbox) | http://localhost:8025 |
 | Prometheus | http://localhost:9090 |
 | Grafana | http://localhost:3000 |
