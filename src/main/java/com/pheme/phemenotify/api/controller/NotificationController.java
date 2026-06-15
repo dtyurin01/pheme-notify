@@ -25,7 +25,7 @@ public class NotificationController {
   @Operation(
       summary = "Get notification status",
       description = "Returns delivery status for given notification id")
-  @GetMapping("/{id}/status")
+  @GetMapping(path = "/{id}/status", version = "1")
   public ResponseEntity<NotificationResponse> getStatus(@PathVariable UUID id) {
     return ResponseEntity.ok(notificationService.getById(id));
   }
@@ -33,7 +33,7 @@ public class NotificationController {
   @Operation(
       summary = "Get notification status by event id and channel",
       description = "Returns delivery status for given Kafka event id and channel")
-  @GetMapping("/status")
+  @GetMapping(path = "/status", version = "1")
   public ResponseEntity<NotificationResponse> getStatusByEventIdAndChannel(
       @RequestParam String eventId, @RequestParam Channel channelId) {
     return ResponseEntity.ok(notificationService.getByEventIdAndChannel(channelId, eventId));

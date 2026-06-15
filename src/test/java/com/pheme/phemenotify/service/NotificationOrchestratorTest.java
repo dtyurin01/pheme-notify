@@ -72,7 +72,7 @@ class NotificationOrchestratorTest {
     orchestrator.process(NotificationTestData.defaultEvent());
 
     verifyNoInteractions(notificationRepository);
-    verify(notificationMetrics).incrementDuplicateSkipped();
+    verifyNoInteractions(notificationMetrics);
   }
 
   @Test

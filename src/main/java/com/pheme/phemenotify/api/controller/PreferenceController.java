@@ -22,7 +22,7 @@ public class PreferenceController {
   @Operation(
       summary = "Get user preferences",
       description = "Returns notification settings for given user")
-  @GetMapping("/{userId}/preferences")
+  @GetMapping(path = "/{userId}/preferences", version = "1")
   public ResponseEntity<PreferenceResponse> getPreferences(@PathVariable String userId) {
     return ResponseEntity.ok(preferenceService.getByUserId(userId));
   }
@@ -30,7 +30,7 @@ public class PreferenceController {
   @Operation(
       summary = "Create or update user preferences",
       description = "Upserts enabled channels, locale, timezone and enabled flag for given user")
-  @PutMapping("/{userId}/preferences")
+  @PutMapping(path = "/{userId}/preferences", version = "1")
   public ResponseEntity<PreferenceResponse> upsertPreferences(
       @PathVariable String userId, @Valid @RequestBody CreatePreferenceRequest request) {
     return ResponseEntity.ok(preferenceService.upsert(userId, request));
