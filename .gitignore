@@ -44,6 +44,6 @@ CLAUDE.md
 effective_java_tracker.md
 .DS_Store
 
-E2E_TEST_PLAN.md
+.claude/E2E_TEST_PLAN.md
 MICROSERVICES_PLAN.md
 PRODUCTION_ROADMAP.md

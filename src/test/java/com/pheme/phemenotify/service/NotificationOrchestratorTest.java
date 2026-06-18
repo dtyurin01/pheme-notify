@@ -21,6 +21,8 @@ import com.pheme.phemenotify.util.NotificationTestData;
 import com.pheme.phemenotify.util.PreferenceTestData;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -133,6 +135,56 @@ class NotificationOrchestratorTest {
     verify(notificationMetrics).recordSendDuration(any(), eq(Channel.EMAIL));
   }
 
+    @Test
+    void shouldReuseExistingNotification_whenRetryAndRecordExists() {
+      Notification existing = NotificationTestData.entityWith(
+          UUID.randomUUID(), NotificationStatus.FAILED, "SEND_FAILED:RuntimeException");
+
+      existing.setIdempotencyKey("event-1:EMAIL");
+
+      when(userPreferenceRepository.findByUserId("user-1"))
+          .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
+      when(notificationRepository.findByIdempotencyKey("event-1:EMAIL"))
+          .thenReturn(Optional.of(existing));
+      when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
+
+      boolean result = orchestrator.processRetry(NotificationTestData.defaultEvent());
+
+      assertThat(result).isTrue();
+      assertThat(existing.getStatus()).isEqualTo(NotificationStatus.DELIVERED);
+
+      verify(notificationRepository, never()).save(argThat(n-> n.getId() == null)); // No new notification created
+
+    }
+
+    @Test
+    void shouldCreateNewNotification_whenRetryAndNoRecordExists() {
+      when(userPreferenceRepository.findByUserId("user-1"))
+          .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
+      when(notificationRepository.findByIdempotencyKey("event-1:EMAIL"))
+        .thenReturn(Optional.empty());
+      when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
+
+      boolean result = orchestrator.processRetry(NotificationTestData.defaultEvent());
+
+      assertThat(result).isTrue();
+      ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository, atLeastOnce()).save(captor.capture());
+        assertThat(captor.getAllValues().getFirst().getStatus()).isEqualTo(NotificationStatus.DELIVERED);
+    }
+
+    @Test
+    void shouldReturnFalse_whenRetryAndChannelDisabled() {
+      UserPreferences prefs = PreferenceTestData.entityWith(
+          "user-1", Set.of(Channel.SMS), "en", "UTC");
+
+      when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(prefs));
+
+      boolean result = orchestrator.processRetry(NotificationTestData.defaultEvent()); // defaultEvent has Channel.EMAIL
+      assertThat(result).isFalse();
+      verifyNoInteractions(notificationRepository);
+    }
+
   @Test
   void shouldMarkAsFailed_whenRateLimitExceeded() {
     when(deduplicationService.isNew("event-1")).thenReturn(true);
@@ -164,6 +216,8 @@ class NotificationOrchestratorTest {
 
     when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(prefs));
     when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
+    when(notificationRepository.findByIdempotencyKey("event-1:EMAIL")).thenReturn(Optional.empty());
+
     lenient().when(providerRegistry.getProvider(Channel.SMS)).thenReturn(smsProvider);
 
     orchestrator.processRetry(NotificationTestData.defaultEvent());
