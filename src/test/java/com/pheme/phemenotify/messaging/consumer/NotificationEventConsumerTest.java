@@ -106,8 +106,12 @@ public class NotificationEventConsumerTest {
   void shouldThrowIllegalArgument_whenEventHasNullFields() {
     NotificationEvent event =
         new NotificationEvent(
-            null, "user-1", OrderCompletedEventType.CODE, Channel.EMAIL,
-            Map.of("email", "test@test.com"), Instant.now());
+            null,
+            "user-1",
+            OrderCompletedEventType.CODE,
+            Channel.EMAIL,
+            Map.of("email", "test@test.com"),
+            Instant.now());
 
     assertThatThrownBy(() -> notificationEventConsumer.handleEvent(event))
         .isInstanceOf(IllegalArgumentException.class)

@@ -39,7 +39,7 @@ public class PreferenceService {
       userPreferences.setTimezone(createPreferenceRequest.timezone());
     }
     if (createPreferenceRequest.enabled() != null) {
-        userPreferences.setEnabled(createPreferenceRequest.enabled());
+      userPreferences.setEnabled(createPreferenceRequest.enabled());
     }
 
     return toResponse(repository.save(userPreferences));

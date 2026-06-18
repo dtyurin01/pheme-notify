@@ -101,7 +101,8 @@ public class PreferenceServiceTest {
   void shouldNotOverrideTimezone_whenTimezoneIsNull() {
     UserPreferences existing =
         PreferenceTestData.entityWith("user-1", Set.of(Channel.EMAIL), "en", "Europe/Kiev");
-    CreatePreferenceRequest request = new CreatePreferenceRequest(Set.of(Channel.SMS), null, null, null);
+    CreatePreferenceRequest request =
+        new CreatePreferenceRequest(Set.of(Channel.SMS), null, null, null);
     when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(existing));
 
     PreferenceResponse response = preferenceService.upsert("user-1", request);

@@ -69,10 +69,15 @@ public class NotificationEventConsumer {
   }
 
   private void validateEvent(NotificationEvent event) {
-    if (event.id() == null || event.userId() == null || event.eventType() == null
-        || event.channel() == null || event.payload() == null || event.payload().isEmpty()) {
+    if (event.id() == null
+        || event.userId() == null
+        || event.eventType() == null
+        || event.channel() == null
+        || event.payload() == null
+        || event.payload().isEmpty()) {
       throw new IllegalArgumentException(
-          "Missing required fields in event: id=%s, userId=%s".formatted(event.id(), event.userId()));
+          "Missing required fields in event: id=%s, userId=%s"
+              .formatted(event.id(), event.userId()));
     }
   }
 

@@ -49,7 +49,7 @@ public class NotificationOrchestrator {
   public boolean processRetry(NotificationEvent notificationEvent) {
     Optional<UserPreferences> preferences = resolvePreferences(notificationEvent.userId());
     if (preferences.isEmpty()) {
-        return false;
+      return false;
     }
 
     Channel channel = notificationEvent.channel();
@@ -70,12 +70,14 @@ public class NotificationOrchestrator {
       notification.setStatus(NotificationStatus.PENDING);
       notificationRepository.save(notification);
     } else {
-      Optional<EventType> eventTypeOpt = eventTypeRegistry.findByCode(notificationEvent.eventType());
+      Optional<EventType> eventTypeOpt =
+          eventTypeRegistry.findByCode(notificationEvent.eventType());
       if (eventTypeOpt.isEmpty()) {
-          return false;
+        return false;
       }
 
-      notification = Notification.pending(
+      notification =
+          Notification.pending(
               notificationEvent.userId(), eventTypeOpt.get(), channel, idempotencyKey);
 
       notificationRepository.save(notification);
@@ -90,15 +92,13 @@ public class NotificationOrchestrator {
    * others (partial failure).
    */
   public void process(NotificationEvent notificationEvent) {
-      Optional<UserPreferences> preferences = resolvePreferences(notificationEvent.userId());
-  if (preferences.isEmpty()) return;
+    Optional<UserPreferences> preferences = resolvePreferences(notificationEvent.userId());
+    if (preferences.isEmpty()) return;
 
-  if (!deduplicationService.isNew(notificationEvent.id())) {
+    if (!deduplicationService.isNew(notificationEvent.id())) {
       log.warn("Duplicate event {}, skipping", notificationEvent.id());
       return;
     }
-
-
 
     for (Channel channel : preferences.get().getEnabledChannels()) {
       processChannel(notificationEvent, channel);
@@ -118,8 +118,8 @@ public class NotificationOrchestrator {
     }
 
     if (!preferences.get().isEnabled()) {
-        log.warn("Notifications disabled for user {}, skipping", userId);
-        return Optional.empty();
+      log.warn("Notifications disabled for user {}, skipping", userId);
+      return Optional.empty();
     }
 
     if (preferences.get().getEnabledChannels().isEmpty()) {
@@ -188,9 +188,7 @@ public class NotificationOrchestrator {
     try {
       String renderedTemplate =
           templateService.render(
-              notification.getEventType(),
-              channel,
-              new HashMap<>(notificationEvent.payload()));
+              notification.getEventType(), channel, new HashMap<>(notificationEvent.payload()));
 
       providerRegistry.getProvider(channel).send(notificationEvent, renderedTemplate);
       notification.setStatus(NotificationStatus.DELIVERED);

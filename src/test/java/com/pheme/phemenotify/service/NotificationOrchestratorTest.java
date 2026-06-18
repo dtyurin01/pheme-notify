@@ -22,7 +22,6 @@ import com.pheme.phemenotify.util.PreferenceTestData;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -88,18 +87,17 @@ class NotificationOrchestratorTest {
     verifyNoInteractions(notificationRepository);
   }
 
-    @Test
-    void shouldNotMarkAsDuplicate_whenUserPreferencesNotFound() {
-        when(userPreferenceRepository.findByUserId("user-1"))
-            .thenReturn(Optional.empty());
+  @Test
+  void shouldNotMarkAsDuplicate_whenUserPreferencesNotFound() {
+    when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.empty());
 
-        orchestrator.process(NotificationTestData.defaultEvent());
+    orchestrator.process(NotificationTestData.defaultEvent());
 
-        verifyNoInteractions(deduplicationService);
-        verifyNoInteractions(notificationRepository);
-    }
+    verifyNoInteractions(deduplicationService);
+    verifyNoInteractions(notificationRepository);
+  }
 
-    @Test
+  @Test
   void shouldSkip_whenEnabledChannelsEmpty() {
     when(userPreferenceRepository.findByUserId("user-1"))
         .thenReturn(Optional.of(PreferenceTestData.entityWithNoChannels()));
@@ -146,66 +144,70 @@ class NotificationOrchestratorTest {
     verify(notificationMetrics).recordSendDuration(any(), eq(Channel.EMAIL));
   }
 
-    @Test
-    void shouldReuseExistingNotification_whenRetryAndRecordExists() {
-      Notification existing = NotificationTestData.entityWith(
-          UUID.randomUUID(), NotificationStatus.FAILED, "SEND_FAILED:RuntimeException");
+  @Test
+  void shouldReuseExistingNotification_whenRetryAndRecordExists() {
+    Notification existing =
+        NotificationTestData.entityWith(
+            UUID.randomUUID(), NotificationStatus.FAILED, "SEND_FAILED:RuntimeException");
 
-      existing.setIdempotencyKey("event-1:EMAIL");
+    existing.setIdempotencyKey("event-1:EMAIL");
 
-      when(userPreferenceRepository.findByUserId("user-1"))
-          .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
-      when(notificationRepository.findByIdempotencyKey("event-1:EMAIL"))
-          .thenReturn(Optional.of(existing));
-      when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
+    when(userPreferenceRepository.findByUserId("user-1"))
+        .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
+    when(notificationRepository.findByIdempotencyKey("event-1:EMAIL"))
+        .thenReturn(Optional.of(existing));
+    when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
 
-      boolean result = orchestrator.processRetry(NotificationTestData.defaultEvent());
+    boolean result = orchestrator.processRetry(NotificationTestData.defaultEvent());
 
-      assertThat(result).isTrue();
-      assertThat(existing.getStatus()).isEqualTo(NotificationStatus.DELIVERED);
+    assertThat(result).isTrue();
+    assertThat(existing.getStatus()).isEqualTo(NotificationStatus.DELIVERED);
 
-      verify(notificationRepository, never()).save(argThat(n-> n.getId() == null)); // No new notification created
+    verify(notificationRepository, never())
+        .save(argThat(n -> n.getId() == null)); // No new notification created
+  }
 
-    }
-    @Test
-    void shouldSkip_whenUserPreferencesDisabled() {
-        UserPreferences prefs = PreferenceTestData.defaultEntity();
-        prefs.setEnabled(false);
-        when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(prefs));
+  @Test
+  void shouldSkip_whenUserPreferencesDisabled() {
+    UserPreferences prefs = PreferenceTestData.defaultEntity();
+    prefs.setEnabled(false);
+    when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(prefs));
 
-        orchestrator.process(NotificationTestData.defaultEvent());
+    orchestrator.process(NotificationTestData.defaultEvent());
 
-        verifyNoInteractions(deduplicationService);
-        verifyNoInteractions(notificationRepository);
-    }
+    verifyNoInteractions(deduplicationService);
+    verifyNoInteractions(notificationRepository);
+  }
 
-    @Test
-    void shouldCreateNewNotification_whenRetryAndNoRecordExists() {
-      when(userPreferenceRepository.findByUserId("user-1"))
-          .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
-      when(notificationRepository.findByIdempotencyKey("event-1:EMAIL"))
-        .thenReturn(Optional.empty());
-      when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
+  @Test
+  void shouldCreateNewNotification_whenRetryAndNoRecordExists() {
+    when(userPreferenceRepository.findByUserId("user-1"))
+        .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
+    when(notificationRepository.findByIdempotencyKey("event-1:EMAIL")).thenReturn(Optional.empty());
+    when(providerRegistry.getProvider(Channel.EMAIL)).thenReturn(emailProvider);
 
-      boolean result = orchestrator.processRetry(NotificationTestData.defaultEvent());
+    boolean result = orchestrator.processRetry(NotificationTestData.defaultEvent());
 
-      assertThat(result).isTrue();
-      ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
-        verify(notificationRepository, atLeastOnce()).save(captor.capture());
-        assertThat(captor.getAllValues().getFirst().getStatus()).isEqualTo(NotificationStatus.DELIVERED);
-    }
+    assertThat(result).isTrue();
+    ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+    verify(notificationRepository, atLeastOnce()).save(captor.capture());
+    assertThat(captor.getAllValues().getFirst().getStatus())
+        .isEqualTo(NotificationStatus.DELIVERED);
+  }
 
-    @Test
-    void shouldReturnFalse_whenRetryAndChannelDisabled() {
-      UserPreferences prefs = PreferenceTestData.entityWith(
-          "user-1", Set.of(Channel.SMS), "en", "UTC");
+  @Test
+  void shouldReturnFalse_whenRetryAndChannelDisabled() {
+    UserPreferences prefs =
+        PreferenceTestData.entityWith("user-1", Set.of(Channel.SMS), "en", "UTC");
 
-      when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(prefs));
+    when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(prefs));
 
-      boolean result = orchestrator.processRetry(NotificationTestData.defaultEvent()); // defaultEvent has Channel.EMAIL
-      assertThat(result).isFalse();
-      verifyNoInteractions(notificationRepository);
-    }
+    boolean result =
+        orchestrator.processRetry(
+            NotificationTestData.defaultEvent()); // defaultEvent has Channel.EMAIL
+    assertThat(result).isFalse();
+    verifyNoInteractions(notificationRepository);
+  }
 
   @Test
   void shouldMarkAsFailed_whenRateLimitExceeded() {
