@@ -69,6 +69,8 @@ class NotificationOrchestratorTest {
 
   @Test
   void shouldSkip_whenEventIsDuplicate() {
+    when(userPreferenceRepository.findByUserId("user-1"))
+        .thenReturn(Optional.of(PreferenceTestData.defaultEntity()));
     when(deduplicationService.isNew("event-1")).thenReturn(false);
 
     orchestrator.process(NotificationTestData.defaultEvent());
@@ -79,7 +81,6 @@ class NotificationOrchestratorTest {
 
   @Test
   void shouldSkip_whenUserPreferencesNotFound() {
-    when(deduplicationService.isNew("event-1")).thenReturn(true);
     when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.empty());
 
     orchestrator.process(NotificationTestData.defaultEvent());
@@ -87,9 +88,19 @@ class NotificationOrchestratorTest {
     verifyNoInteractions(notificationRepository);
   }
 
-  @Test
+    @Test
+    void shouldNotMarkAsDuplicate_whenUserPreferencesNotFound() {
+        when(userPreferenceRepository.findByUserId("user-1"))
+            .thenReturn(Optional.empty());
+
+        orchestrator.process(NotificationTestData.defaultEvent());
+
+        verifyNoInteractions(deduplicationService);
+        verifyNoInteractions(notificationRepository);
+    }
+
+    @Test
   void shouldSkip_whenEnabledChannelsEmpty() {
-    when(deduplicationService.isNew("event-1")).thenReturn(true);
     when(userPreferenceRepository.findByUserId("user-1"))
         .thenReturn(Optional.of(PreferenceTestData.entityWithNoChannels()));
 
@@ -155,6 +166,17 @@ class NotificationOrchestratorTest {
 
       verify(notificationRepository, never()).save(argThat(n-> n.getId() == null)); // No new notification created
 
+    }
+    @Test
+    void shouldSkip_whenUserPreferencesDisabled() {
+        UserPreferences prefs = PreferenceTestData.defaultEntity();
+        prefs.setEnabled(false);
+        when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(prefs));
+
+        orchestrator.process(NotificationTestData.defaultEvent());
+
+        verifyNoInteractions(deduplicationService);
+        verifyNoInteractions(notificationRepository);
     }
 
     @Test

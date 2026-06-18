@@ -90,13 +90,15 @@ public class NotificationOrchestrator {
    * others (partial failure).
    */
   public void process(NotificationEvent notificationEvent) {
-    if (!deduplicationService.isNew(notificationEvent.id())) {
+      Optional<UserPreferences> preferences = resolvePreferences(notificationEvent.userId());
+  if (preferences.isEmpty()) return;
+
+  if (!deduplicationService.isNew(notificationEvent.id())) {
       log.warn("Duplicate event {}, skipping", notificationEvent.id());
       return;
     }
 
-    Optional<UserPreferences> preferences = resolvePreferences(notificationEvent.userId());
-    if (preferences.isEmpty()) return;
+
 
     for (Channel channel : preferences.get().getEnabledChannels()) {
       processChannel(notificationEvent, channel);
@@ -113,6 +115,11 @@ public class NotificationOrchestrator {
     if (preferences.isEmpty()) {
       log.warn("No user preferences found for user {}, skipping", userId);
       return Optional.empty();
+    }
+
+    if (!preferences.get().isEnabled()) {
+        log.warn("Notifications disabled for user {}, skipping", userId);
+        return Optional.empty();
     }
 
     if (preferences.get().getEnabledChannels().isEmpty()) {
@@ -184,6 +191,7 @@ public class NotificationOrchestrator {
               notification.getEventType(),
               channel,
               new HashMap<>(notificationEvent.payload()));
+
       providerRegistry.getProvider(channel).send(notificationEvent, renderedTemplate);
       notification.setStatus(NotificationStatus.DELIVERED);
       notification.setSentAt(Instant.now());

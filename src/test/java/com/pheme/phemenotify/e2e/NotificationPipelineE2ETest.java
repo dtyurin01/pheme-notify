@@ -143,6 +143,6 @@ public class NotificationPipelineE2ETest extends BaseIntegrationTest {
               assertThat(notificationRepository.findAll()).isEmpty();
             });
 
-    assertThat(stringRedisTemplate.hasKey("dedup:evt-p1")).isTrue();
+    assertThat(stringRedisTemplate.hasKey("dedup:evt-p1")).isFalse();
   }
 }
