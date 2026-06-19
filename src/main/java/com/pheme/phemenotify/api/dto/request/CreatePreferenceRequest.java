@@ -5,4 +5,4 @@ import jakarta.validation.constraints.NotEmpty;
 import java.util.Set;
 
 public record CreatePreferenceRequest(
-    @NotEmpty Set<Channel> enabledChannels, String locale, String timezone) {}
+    @NotEmpty Set<Channel> enabledChannels, String locale, String timezone, Boolean enabled) {}

@@ -81,7 +81,7 @@ public class PreferenceControllerTest {
 
   @Test
   void shouldReturn400_whenEnabledChannelIsEmpty() throws Exception {
-    CreatePreferenceRequest request = new CreatePreferenceRequest(Set.of(), "en", "UTC");
+    CreatePreferenceRequest request = new CreatePreferenceRequest(Set.of(), "en", "UTC", null);
 
     mockMvc
         .perform(

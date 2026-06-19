@@ -9,12 +9,15 @@ import static org.mockito.Mockito.when;
 
 import com.pheme.phemenotify.infrastructure.metrics.NotificationMetrics;
 import com.pheme.phemenotify.messaging.event.NotificationEvent;
+import com.pheme.phemenotify.persistence.entity.Channel;
 import com.pheme.phemenotify.persistence.entity.EventTypeRegistry;
 import com.pheme.phemenotify.persistence.entity.FailedNotification;
 import com.pheme.phemenotify.persistence.entity.eventtype.OrderCompletedEventType;
 import com.pheme.phemenotify.persistence.repository.FailedNotificationRepository;
 import com.pheme.phemenotify.service.NotificationOrchestrator;
 import com.pheme.phemenotify.util.NotificationTestData;
+import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
@@ -97,6 +100,22 @@ public class NotificationEventConsumerTest {
     assertThatThrownBy(() -> notificationEventConsumer.handleEvent(notificationEvent));
 
     assertThat(MDC.get("eventId")).isNull();
+  }
+
+  @Test
+  void shouldThrowIllegalArgument_whenEventHasNullFields() {
+    NotificationEvent event =
+        new NotificationEvent(
+            null,
+            "user-1",
+            OrderCompletedEventType.CODE,
+            Channel.EMAIL,
+            Map.of("email", "test@test.com"),
+            Instant.now());
+
+    assertThatThrownBy(() -> notificationEventConsumer.handleEvent(event))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Missing required fields");
   }
 
   // --- handleDlt ---

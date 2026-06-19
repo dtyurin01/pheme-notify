@@ -40,7 +40,7 @@ public class NotificationEventConsumer {
     MDC.put("eventId", event.id());
     try {
       log.info("Received event: id:{}, userId:{}", event.id(), event.userId());
-
+      validateEvent(event);
       orchestrator.process(event);
     } finally {
       MDC.clear();
@@ -66,6 +66,19 @@ public class NotificationEventConsumer {
             .build();
 
     failedNotificationRepository.save(failed);
+  }
+
+  private void validateEvent(NotificationEvent event) {
+    if (event.id() == null
+        || event.userId() == null
+        || event.eventType() == null
+        || event.channel() == null
+        || event.payload() == null
+        || event.payload().isEmpty()) {
+      throw new IllegalArgumentException(
+          "Missing required fields in event: id=%s, userId=%s"
+              .formatted(event.id(), event.userId()));
+    }
   }
 
   private Map<String, Object> buildEventPayload(NotificationEvent event) {

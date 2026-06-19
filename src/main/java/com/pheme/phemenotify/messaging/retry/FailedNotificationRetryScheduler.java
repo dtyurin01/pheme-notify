@@ -1,5 +1,7 @@
 package com.pheme.phemenotify.messaging.retry;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pheme.phemenotify.config.RetrySchedulerProperties;
 import com.pheme.phemenotify.infrastructure.metrics.NotificationMetrics;
 import com.pheme.phemenotify.messaging.event.NotificationEvent;
@@ -24,6 +26,7 @@ public class FailedNotificationRetryScheduler {
   private final NotificationOrchestrator notificationOrchestrator;
   private final RetrySchedulerProperties properties;
   private final NotificationMetrics notificationMetrics;
+  private final ObjectMapper objectMapper;
 
   @Scheduled(fixedDelayString = "${notification.retry-scheduler.fixed-delay}")
   public void retryFailedNotifications() {
@@ -77,7 +80,7 @@ public class FailedNotificationRetryScheduler {
         (String) raw.get("userId"),
         failed.getEventType().getCode(),
         failed.getChannel(),
-        (Map<String, String>) raw.get("payload"),
+        objectMapper.convertValue(raw.get("payload"), new TypeReference<Map<String, String>>() {}),
         Instant.parse((String) raw.get("occurredAt")));
   }
 }

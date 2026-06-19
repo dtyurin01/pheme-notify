@@ -39,24 +39,51 @@ public class NotificationOrchestrator {
 
   /**
    * Retries delivery for a single channel from {@link
-   * com.pheme.phemenotify.persistence.entity.FailedNotification}. Skips if user preferences are
-   * missing or the channel was disabled since the original attempt.
+   * com.pheme.phemenotify.persistence.entity.FailedNotification}. Looks up the existing {@link
+   * Notification} by idempotency key and resets it to PENDING before re-sending; creates a new
+   * record only if no prior attempt exists (e.g. DLT-originated retry). Skips if user preferences
+   * are missing or the channel was disabled since the original attempt.
    *
    * @return true if delivered successfully
    */
   public boolean processRetry(NotificationEvent notificationEvent) {
     Optional<UserPreferences> preferences = resolvePreferences(notificationEvent.userId());
-    if (preferences.isEmpty()) return false;
+    if (preferences.isEmpty()) {
+      return false;
+    }
 
-    if (!preferences.get().getEnabledChannels().contains(notificationEvent.channel())) {
+    Channel channel = notificationEvent.channel();
+    if (!preferences.get().getEnabledChannels().contains(channel)) {
       log.warn(
           "Channel {} is not enabled for user {}, skipping retry",
-          notificationEvent.channel(),
+          channel,
           notificationEvent.userId());
       return false;
     }
 
-    return processChannel(notificationEvent, notificationEvent.channel());
+    String idempotencyKey = IDEMPOTENCY_KEY_FORMAT.formatted(notificationEvent.id(), channel);
+    Optional<Notification> existing = notificationRepository.findByIdempotencyKey(idempotencyKey);
+
+    Notification notification;
+    if (existing.isPresent()) {
+      notification = existing.get();
+      notification.setStatus(NotificationStatus.PENDING);
+      notificationRepository.save(notification);
+    } else {
+      Optional<EventType> eventTypeOpt =
+          eventTypeRegistry.findByCode(notificationEvent.eventType());
+      if (eventTypeOpt.isEmpty()) {
+        return false;
+      }
+
+      notification =
+          Notification.pending(
+              notificationEvent.userId(), eventTypeOpt.get(), channel, idempotencyKey);
+
+      notificationRepository.save(notification);
+    }
+
+    return sendAndUpdate(notification, notificationEvent, channel);
   }
 
   /**
@@ -65,13 +92,13 @@ public class NotificationOrchestrator {
    * others (partial failure).
    */
   public void process(NotificationEvent notificationEvent) {
+    Optional<UserPreferences> preferences = resolvePreferences(notificationEvent.userId());
+    if (preferences.isEmpty()) return;
+
     if (!deduplicationService.isNew(notificationEvent.id())) {
       log.warn("Duplicate event {}, skipping", notificationEvent.id());
       return;
     }
-
-    Optional<UserPreferences> preferences = resolvePreferences(notificationEvent.userId());
-    if (preferences.isEmpty()) return;
 
     for (Channel channel : preferences.get().getEnabledChannels()) {
       processChannel(notificationEvent, channel);
@@ -87,6 +114,11 @@ public class NotificationOrchestrator {
 
     if (preferences.isEmpty()) {
       log.warn("No user preferences found for user {}, skipping", userId);
+      return Optional.empty();
+    }
+
+    if (!preferences.get().isEnabled()) {
+      log.warn("Notifications disabled for user {}, skipping", userId);
       return Optional.empty();
     }
 
@@ -128,6 +160,15 @@ public class NotificationOrchestrator {
       return false;
     }
 
+    return sendAndUpdate(notification, notificationEvent, channel);
+  }
+
+  /**
+   * Rate-limits, renders, sends via provider, and updates the {@link Notification} status. Shared
+   * by both the primary delivery path ({@link #processChannel}) and {@link #processRetry}.
+   */
+  private boolean sendAndUpdate(
+      Notification notification, NotificationEvent notificationEvent, Channel channel) {
     try {
       rateLimitService.checkLimit(notificationEvent.userId(), channel);
     } catch (RateLimitExceededException e) {
@@ -146,7 +187,9 @@ public class NotificationOrchestrator {
     Timer.Sample sample = notificationMetrics.sendTimer();
     try {
       String renderedTemplate =
-          templateService.render(eventType, channel, new HashMap<>(notificationEvent.payload()));
+          templateService.render(
+              notification.getEventType(), channel, new HashMap<>(notificationEvent.payload()));
+
       providerRegistry.getProvider(channel).send(notificationEvent, renderedTemplate);
       notification.setStatus(NotificationStatus.DELIVERED);
       notification.setSentAt(Instant.now());

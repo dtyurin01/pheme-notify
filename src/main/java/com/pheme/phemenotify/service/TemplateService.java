@@ -37,7 +37,7 @@ public class TemplateService {
 
     String channelDir = channel.name().toLowerCase();
 
-    String extension = channel == Channel.EMAIL ? "html" : "txt";
+    String extension = channel.getTemplateExtension();
 
     return channelDir + "/" + code + "." + extension;
   }

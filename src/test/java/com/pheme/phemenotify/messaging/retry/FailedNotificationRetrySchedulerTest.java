@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pheme.phemenotify.config.RetrySchedulerProperties;
 import com.pheme.phemenotify.infrastructure.metrics.NotificationMetrics;
 import com.pheme.phemenotify.persistence.entity.FailedNotification;
@@ -14,6 +15,7 @@ import com.pheme.phemenotify.util.FailedNotificationTestData;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -33,6 +35,19 @@ class FailedNotificationRetrySchedulerTest {
   @Mock private RetrySchedulerProperties properties;
 
   @Mock private NotificationMetrics notificationMetrics;
+
+  private final ObjectMapper objectMapper = new ObjectMapper();
+
+  @BeforeEach
+  void setUp() {
+    scheduler =
+        new FailedNotificationRetryScheduler(
+            failedNotificationRepository,
+            notificationOrchestrator,
+            properties,
+            notificationMetrics,
+            objectMapper);
+  }
 
   @Test
   void shouldDoNothing_whenNoPendingNotifications() {

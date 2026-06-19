@@ -40,7 +40,7 @@ public class PreferenceTestData {
   }
 
   public static CreatePreferenceRequest defaultRequest() {
-    return new CreatePreferenceRequest(Set.of(Channel.EMAIL), "en", "UTC");
+    return new CreatePreferenceRequest(Set.of(Channel.EMAIL), "en", "UTC", null);
   }
 
   public static PreferenceResponse defaultResponse() {

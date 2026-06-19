@@ -38,6 +38,9 @@ public class PreferenceService {
     if (createPreferenceRequest.timezone() != null) {
       userPreferences.setTimezone(createPreferenceRequest.timezone());
     }
+    if (createPreferenceRequest.enabled() != null) {
+      userPreferences.setEnabled(createPreferenceRequest.enabled());
+    }
 
     return toResponse(repository.save(userPreferences));
   }

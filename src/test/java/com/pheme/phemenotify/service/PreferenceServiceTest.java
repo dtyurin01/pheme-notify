@@ -73,7 +73,7 @@ public class PreferenceServiceTest {
     UserPreferences existing =
         PreferenceTestData.entityWith("user-1", Set.of(Channel.EMAIL), "en-US", "UTC");
     CreatePreferenceRequest updateRequest =
-        new CreatePreferenceRequest(Set.of(Channel.EMAIL, Channel.SMS), null, null);
+        new CreatePreferenceRequest(Set.of(Channel.EMAIL, Channel.SMS), null, null, null);
 
     when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(existing));
 
@@ -88,7 +88,7 @@ public class PreferenceServiceTest {
     UserPreferences existing =
         PreferenceTestData.entityWith("user-1", Set.of(Channel.EMAIL), "fr", "UTC");
     CreatePreferenceRequest updateRequest =
-        new CreatePreferenceRequest(Set.of(Channel.SMS), null, null);
+        new CreatePreferenceRequest(Set.of(Channel.SMS), null, null, null);
 
     when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(existing));
 
@@ -101,7 +101,8 @@ public class PreferenceServiceTest {
   void shouldNotOverrideTimezone_whenTimezoneIsNull() {
     UserPreferences existing =
         PreferenceTestData.entityWith("user-1", Set.of(Channel.EMAIL), "en", "Europe/Kiev");
-    CreatePreferenceRequest request = new CreatePreferenceRequest(Set.of(Channel.SMS), null, null);
+    CreatePreferenceRequest request =
+        new CreatePreferenceRequest(Set.of(Channel.SMS), null, null, null);
     when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(existing));
 
     PreferenceResponse response = preferenceService.upsert("user-1", request);
@@ -114,12 +115,27 @@ public class PreferenceServiceTest {
     UserPreferences existing =
         PreferenceTestData.entityWith("user-1", Set.of(Channel.EMAIL), "en", "UTC");
     CreatePreferenceRequest request =
-        new CreatePreferenceRequest(Set.of(Channel.EMAIL), "de", "Europe/Berlin");
+        new CreatePreferenceRequest(Set.of(Channel.EMAIL), "de", "Europe/Berlin", null);
     when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(existing));
 
     PreferenceResponse response = preferenceService.upsert("user-1", request);
 
     assertThat(response.locale()).isEqualTo("de");
     assertThat(response.timezone()).isEqualTo("Europe/Berlin");
+  }
+
+  @Test
+  void shouldUpdateEnabledField_whenUpsertWithEnabledFalse() {
+    UserPreferences existing =
+        PreferenceTestData.entityWith("user-1", Set.of(Channel.EMAIL), "en", "UTC");
+    CreatePreferenceRequest request =
+        new CreatePreferenceRequest(Set.of(Channel.EMAIL), null, null, false);
+
+    when(userPreferenceRepository.findByUserId("user-1")).thenReturn(Optional.of(existing));
+
+    PreferenceResponse response = preferenceService.upsert("user-1", request);
+
+    assertThat(response.enabled()).isFalse();
+    assertThat(existing.isEnabled()).isFalse();
   }
 }
