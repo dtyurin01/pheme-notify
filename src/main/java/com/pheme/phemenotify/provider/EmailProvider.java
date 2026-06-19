@@ -3,6 +3,8 @@ package com.pheme.phemenotify.provider;
 import com.pheme.phemenotify.messaging.event.NotificationEvent;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import jakarta.mail.MessagingException;
+import jakarta.mail.internet.AddressException;
+import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreaker;
@@ -29,6 +31,11 @@ public class EmailProvider implements NotificationProvider {
     String email = event.payload().get("email");
     if (email == null) {
       throw new IllegalArgumentException("Email not found in payload for user: " + event.userId());
+    }
+    try {
+      new InternetAddress(email, true);
+    } catch (AddressException e) {
+      throw new IllegalArgumentException("Invalid email format");
     }
 
     circuitBreaker.run(

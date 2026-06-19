@@ -14,25 +14,19 @@ import org.springframework.validation.annotation.Validated;
 public class RateLimitProperties {
 
   /** Email limit: 5 requests per hour. Property: notification.rate-limit.email */
-  @Valid private ChannelLimit email = new ChannelLimit(5, Duration.ofHours(1));
+  @Valid private final ChannelLimit email;
 
   /** SMS limit: 3 requests per hour. Property: notification.rate-limit.sms */
-  @Valid private ChannelLimit sms = new ChannelLimit(3, Duration.ofHours(1));
+  @Valid private final ChannelLimit sms;
 
   /** Push limit: 20 requests per hour. Property: notification.rate-limit.push */
-  @Valid private ChannelLimit push = new ChannelLimit(20, Duration.ofHours(1));
+  @Valid private final ChannelLimit push;
 
-  // Needed for setter-based binding of top-level fields
-  public void setEmail(ChannelLimit email) {
-    this.email = email;
-  }
-
-  public void setSms(ChannelLimit sms) {
-    this.sms = sms;
-  }
-
-  public void setPush(ChannelLimit push) {
-    this.push = push;
+  public RateLimitProperties(
+      @Valid ChannelLimit email, @Valid ChannelLimit sms, @Valid ChannelLimit push) {
+    this.email = email != null ? email : new ChannelLimit(5, Duration.ofHours(1));
+    this.sms = sms != null ? sms : new ChannelLimit(3, Duration.ofHours(1));
+    this.push = push != null ? push : new ChannelLimit(20, Duration.ofHours(1));
   }
 
   public record ChannelLimit(@Min(1) int maxRequests, @NotNull Duration window) {}

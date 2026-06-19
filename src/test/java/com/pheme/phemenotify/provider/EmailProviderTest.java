@@ -63,4 +63,36 @@ public class EmailProviderTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("user-1");
   }
+
+  @Test
+  void shouldRejectEmail_whenContainsCRLF() {
+    NotificationEvent event =
+        NotificationTestData.eventWithPayload(
+            Map.of("email", "victim@example.com\r\nBcc: spy@evil.com"));
+
+    assertThatThrownBy(() -> emailProvider.send(event, "template"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Invalid email format");
+  }
+
+  @Test
+  void shouldRejectEmail_whenContainsLineFeed() {
+    NotificationEvent event =
+        NotificationTestData.eventWithPayload(
+            Map.of("email", "victim@example.com\nBcc: spy@evil.com"));
+
+    assertThatThrownBy(() -> emailProvider.send(event, "template"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Invalid email format");
+  }
+
+  @Test
+  void shouldRejectEmail_whenMultipleAddresses() {
+    NotificationEvent event =
+        NotificationTestData.eventWithPayload(Map.of("email", "a@x.com, spy@evil.com"));
+
+    assertThatThrownBy(() -> emailProvider.send(event, "template"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Invalid email format");
+  }
 }
