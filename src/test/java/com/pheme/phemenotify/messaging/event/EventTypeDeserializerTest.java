@@ -33,7 +33,9 @@ public class EventTypeDeserializerTest {
 
   @Test
   void shouldReturnEventType_whenCodeIsValid() throws IOException {
-    JsonParser parser = mapper.createParser("""
+    JsonParser parser =
+        mapper.createParser(
+            """
             "ORDER_CREATED"
             """);
     parser.nextToken();
@@ -59,7 +61,9 @@ public class EventTypeDeserializerTest {
   @Test
   void shouldThrowUnknown_whenCodeIsUnknown() throws IOException {
     String unknownCode = "UNKNOWN_CODE";
-    JsonParser parser = mapper.createParser("""
+    JsonParser parser =
+        mapper.createParser(
+            """
             "UNKNOWN_CODE"
             """);
     parser.nextToken();
